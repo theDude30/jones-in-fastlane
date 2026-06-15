@@ -2,6 +2,7 @@ import type { GameConfig } from "@jones/config";
 import type { Command, GameEvent, GameState, PlayerState, ReduceResult } from "./types.js";
 import { travelHours } from "./travel.js";
 import { findJob, meetsUniform } from "./work.js";
+import { advanceTurn } from "./turn.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
@@ -98,8 +99,13 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
       events.push({ type: "Worked", playerId: p.id, earned });
       break;
     }
+    case "EndTurn": {
+      events.push({ type: "TurnEnded", playerId: p.id });
+      advanceTurn(next, config, events);
+      break;
+    }
     default:
-      events.push({ type: "InvalidAction", playerId: p.id, reason: `unhandled command ${command.type}` });
+      events.push({ type: "InvalidAction", playerId: p.id, reason: `unhandled command ${(command as Command).type}` });
   }
 
   return { state: next, events };
