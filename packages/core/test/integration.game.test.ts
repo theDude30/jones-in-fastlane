@@ -17,7 +17,6 @@ describe("headless game", () => {
     const game = createInitialGame(defaultConfig, 7, [
       { name: "Solo", isAI: false, goals: { wealth: 100, happiness: 100, education: 100, career: 100 } },
     ]);
-    // Pre-assign a job (Apply-for-job command arrives in a later plan).
     game.players[0].jobId = "zMart.clerk";
     game.players[0].wage = 5;
     game.players[0].maxExperience = 30;
