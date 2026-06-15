@@ -1,6 +1,7 @@
 import type { GameConfig } from "@jones/config";
 import type { Command, GameEvent, GameState, PlayerState, ReduceResult } from "./types.js";
 import { travelHours } from "./travel.js";
+import { findJob, meetsUniform } from "./work.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
@@ -59,6 +60,42 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
       }
       p.insideBuilding = false;
       events.push({ type: "ExitedBuilding", playerId: p.id, locationId: p.locationId });
+      break;
+    }
+    case "Work": {
+      if (p.jobId === null) {
+        events.push({ type: "InvalidAction", playerId: p.id, reason: "no job" });
+        break;
+      }
+      const job = findJob(config, p.jobId);
+      if (!p.insideBuilding || p.locationId !== job.locationId) {
+        events.push({ type: "InvalidAction", playerId: p.id, reason: "not at workplace" });
+        break;
+      }
+      if (p.hoursRemaining <= 0) {
+        events.push({ type: "NotEnoughTime", playerId: p.id, action: "Work" });
+        break;
+      }
+      // §6: fired if dependibility is 5+ below requirement.
+      if (p.dependibility < job.reqDependibility - 5) {
+        const firedJobId = p.jobId;
+        p.jobId = null;
+        p.wage = 0;
+        events.push({ type: "Fired", playerId: p.id, jobId: firedJobId });
+        break;
+      }
+      if (!meetsUniform(p, job.uniform)) {
+        events.push({ type: "InvalidAction", playerId: p.id, reason: "missing uniform" });
+        break;
+      }
+      const fullHours = config.actionCosts.work;
+      const hours = Math.min(fullHours, p.hoursRemaining);
+      const earned = Math.floor((config.constants.workWageMultiplier * p.wage * hours) / fullHours);
+      p.cash += earned;
+      p.hoursRemaining -= hours;
+      if (p.experience < p.maxExperience) p.experience += 1;
+      if (p.dependibility < p.maxDependibility) p.dependibility += 1;
+      events.push({ type: "Worked", playerId: p.id, earned });
       break;
     }
     default:

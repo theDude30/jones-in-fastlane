@@ -4,3 +4,4 @@ export * from "./setup.js";
 export * from "./goals.js";
 export * from "./travel.js";
 export * from "./reduce.js";
+export * from "./work.js";
