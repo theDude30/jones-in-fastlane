@@ -14,6 +14,12 @@ describe("travelHours", () => {
     const h = travelHours(defaultConfig, "lowCostHousing", "rentOffice");
     expect(h).toBeCloseTo(1 * (10 / 13), 5);
   });
+
+  it("uses the direct distance when it is already the shorter direction", () => {
+    // lowCostHousing(0) -> qtClothing(4): 4 steps direct, 9 steps the other way.
+    const h = travelHours(defaultConfig, "lowCostHousing", "qtClothing");
+    expect(h).toBeCloseTo(4 * (10 / 13), 5);
+  });
 });
 
 describe("reduce TravelTo", () => {
