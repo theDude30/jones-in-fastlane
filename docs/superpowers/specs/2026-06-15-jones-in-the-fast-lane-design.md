@@ -40,20 +40,34 @@ but built in later phases.
   original as reference only** — do not extract or ship its assets (copyright +
   low fidelity). Mechanics, prices, layout, and melodies may inform our originals.
 - **Java port** (`dimidd/openjones`): a clean reimplementation of the **game
-  logic** — the expensive part to rebuild. We port `jones.*` to TypeScript and
-  discard its Swing/Batik rendering and placeholder art. Key packages mapped:
+  logic** — used as the **code skeleton/structure**. We port `jones.*` to TypeScript
+  and discard its Swing/Batik rendering and placeholder art. Key packages mapped:
   `jones.general` (Game/PlayerState/turn loop), `jones.measures` (Goals + stats),
   `jones.map` (locations, grid, A\* routing), `jones.actions`, `jones.possessions`,
   `jones.jobs`, `jones.agents` (39 files of plan-based AI players), and the
-  pluggable `EconomyManager`.
+  pluggable `EconomyManager`. The port is a *reinterpretation* and has inaccuracies
+  vs the original — so it is the structure, not the authoritative numbers.
+- **Game-logic reference (authoritative)**:
+  [`2026-06-15-jones-game-logic-reference.md`](./2026-06-15-jones-game-logic-reference.md),
+  extracted and reconciled from all 143 articles of the
+  [Jones in the Fast Lane Wiki](https://jonesinthefastlane.fandom.com/). This is the
+  **source of truth** for all rules, formulas, tables, and messages. Where it
+  conflicts with the Java port, the reference wins. All numeric tables in it seed
+  `@jones/config`.
 
-### Canonical constants (from the Java port, to preserve)
+### Canonical constants (authoritative — from the logic reference)
 
-- `MAX_PLAYERS = 4`, `TIMEUNITS_PER_WEEK = 600`, `TIMEUNITS_PER_HOUR = 5`.
-- `INITIAL_CASH = 200`, job ranks `1..9`.
-- **Win goals** (each normalized to a /100 score): Wealth `10000`, Health `100`,
-  Happiness `100`, Career `850`, Education `100`. A player wins when all five
-  goal scores are met.
+- `MAX_PLAYERS = 4`, **60 Hours per turn**, `INITIAL_CASH` per original.
+- **Win goals: FOUR goals**, each set per player to 10–100; win when all four are met
+  at the start of a turn:
+  - **Wealth** = `floor(Liquid Assets / 100)` (100-goal ⇒ $10,000)
+  - **Happiness** = Happiness stat
+  - **Education** = `1 + (9 × Degrees)` (100-goal ⇒ all 11 Degrees)
+  - **Career** = `1.25 × Dependibility`, **0 if unemployed** (100-goal ⇒ 80 Dep + a job)
+- **Note — port discrepancies corrected here:** the Java port adds a fifth **Health**
+  goal and uses `TIMEUNITS_PER_WEEK=600` / a different Career formula (target 850).
+  We follow the original: **4 goals (no Health), 60-Hour turns, Career = 1.25×Dep**.
+  See §13 of the logic reference for the full discrepancy list.
 
 ## Key Decisions
 
@@ -97,9 +111,11 @@ A faithful TS port of `jones.*`, restructured as a deterministic command-driven
 state machine.
 
 - **State:** one serializable `GameState` (plain JSON data, no methods) holding
-  `players[]` — each with cash, health, happiness, career, education, job,
-  position, possessions, skills, rent, clock/weeks. Mirrors `PlayerState`.
-  Serializable for save/load and future networking.
+  `players[]` — each with cash, bank balance, stocks, happiness, dependibility,
+  experience, relaxation, degrees, job, position, possessions, clothing weeks, rent
+  state, loan state, clock(hours)/weeks. (Per the logic reference: **no Health
+  stat**; Career is derived from Dependibility.) Serializable for save/load and
+  future networking.
 - **Commands:** every action is an explicit command object — `Move`,
   `EnterBuilding`, `Work`, `Study`, `BuyClothes`, `RentHouse`, `ApplyForJob`,
   `Relax`, `EndTurn`, etc. (mirrors `jones.actions`).
@@ -108,10 +124,13 @@ state machine.
   `WeekEnded`, `PlayerWon`, …).
 - **Determinism:** all randomness flows through a **seeded RNG** passed in. Same
   seed + same commands ⇒ identical game. Enables online play, replay, and testing.
-- **Systems ported:** turn/clock loop, A\* pathfinding (`Route`/Grid → TS), economy
-  hook, goals/win-check, possessions/clothes/rent, jobs (rank 1–9).
-- **Validation:** representative scenarios cross-checked against the Java port so
-  the port is provably faithful.
+- **Systems ported:** the ordered start-of-turn sequence, clock/hours loop, A\*
+  pathfinding (`Route`/Grid → TS), economy step (Index/Reading), goals/win-check,
+  work/hire/raise/fire, study/graduate, money systems (bank/loans/stocks/lottery/
+  pawn), rent/garnishment, clothes/food, and random events — all per the logic
+  reference (§2–§12).
+- **Validation:** scenario tests assert the **logic reference's formulas/tables**
+  (the authoritative spec), with the Java port used only as a structural cross-check.
 
 ### `@jones/config` — configuration (req #5)
 
@@ -216,8 +235,10 @@ humans.
 
 ## Milestones (MVP build order)
 
-1. **M1 — Logic core + config:** ported, deterministic, tested headlessly. Playable
-   via a test harness, no graphics.
+1. **M1 — Logic core + config:** seed `@jones/config` from the logic reference's
+   tables (jobs, degrees, items, economy, goals, locations, action costs), implement
+   the core systems/turn sequence (§2–§12), deterministic and tested headlessly
+   against the reference's formulas. Playable via a test harness, no graphics.
 2. **M2 — AI players:** ported planners run full games headlessly; difficulty via
    config.
 3. **M3 — Rendering + UI:** PixiJS board + responsive React UI + audio system, wired
