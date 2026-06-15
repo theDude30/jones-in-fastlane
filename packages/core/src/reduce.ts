@@ -37,6 +37,30 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
       events.push({ type: "Traveled", playerId: p.id, toLocationId: command.locationId, hoursSpent: hours });
       break;
     }
+    case "EnterBuilding": {
+      if (p.insideBuilding) {
+        events.push({ type: "InvalidAction", playerId: p.id, reason: "already inside" });
+        break;
+      }
+      const cost = config.actionCosts.enterLocation;
+      if (cost > p.hoursRemaining) {
+        events.push({ type: "NotEnoughTime", playerId: p.id, action: "EnterBuilding" });
+        break;
+      }
+      p.hoursRemaining -= cost;
+      p.insideBuilding = true;
+      events.push({ type: "EnteredBuilding", playerId: p.id, locationId: p.locationId });
+      break;
+    }
+    case "ExitBuilding": {
+      if (!p.insideBuilding) {
+        events.push({ type: "InvalidAction", playerId: p.id, reason: "not inside" });
+        break;
+      }
+      p.insideBuilding = false;
+      events.push({ type: "ExitedBuilding", playerId: p.id, locationId: p.locationId });
+      break;
+    }
     default:
       events.push({ type: "InvalidAction", playerId: p.id, reason: `unhandled command ${command.type}` });
   }
