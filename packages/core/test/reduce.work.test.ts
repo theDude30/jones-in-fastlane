@@ -54,6 +54,9 @@ describe("Work", () => {
     expect(state.players[0].jobId).toBeNull();
     expect(state.players[0].wage).toBe(0);
     expect(events.some((e) => e.type === "Fired")).toBe(true);
+    expect(state.players[0].cash).toBe(200);
+    expect(state.players[0].hoursRemaining).toBe(60);
+    expect(state.players[0].experience).toBe(10);
   });
 
   it("refuses to work without the required uniform", () => {
