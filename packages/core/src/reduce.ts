@@ -24,10 +24,12 @@ function cloneState(state: GameState): GameState {
       durables: p.durables.map((d) => ({ ...d })),
       tickets: { ...p.tickets },
       happyGroupsThisTurn: [...p.happyGroupsThisTurn],
+      stocks: { ...p.stocks },
     })),
     rng: { ...state.rng },
     winners: [...state.winners],
     economy: { ...state.economy },
+    stockPrices: { ...state.stockPrices },
   };
 }
 

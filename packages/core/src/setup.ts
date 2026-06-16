@@ -1,4 +1,4 @@
-import type { GameConfig } from "@jones/config";
+import type { GameConfig, StockId } from "@jones/config";
 import type { GameState, GoalTargets, PlayerState } from "./types.js";
 
 export interface PlayerSetup {
@@ -44,6 +44,14 @@ export function createInitialGame(
     durables: [],
     tickets: { baseball: 0, theatre: 0, concert: 0 },
     happyGroupsThisTurn: [],
+    stocks: { gold: 0, silver: 0, porkBellies: 0, blueChip: 0, pennyStocks: 0 },
+    tBills: 0,
+    loanBalance: 0,
+    loanDueWeek: null,
+    timesDefaulted: 0,
+    loanInDefault: false,
+    brokerMenuOpen: false,
+    lotteryTickets: 0,
   }));
   return {
     week: 1,
@@ -53,5 +61,8 @@ export function createInitialGame(
     rng: { seed },
     status: "playing",
     winners: [],
+    stockPrices: Object.fromEntries(
+      config.stocks.map((s) => [s.id, s.basePrice])
+    ) as Record<StockId, number>,
   };
 }
