@@ -63,6 +63,13 @@ describe("Enroll", () => {
     expect(state.players[0].cash).toBe(500);
   });
 
+  it("guard: unknown degreeId → InvalidAction { reason: 'unknown degree' }", () => {
+    const g = eduGame();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { events } = reduce(g, { type: "Enroll", degreeId: "doesNotExist" as any }, testConfig);
+    expect(events.some((e) => e.type === "InvalidAction" && e.reason === "unknown degree")).toBe(true);
+  });
+
   it("guard: already has degree → InvalidAction { reason: 'already graduated' }", () => {
     const g = eduGame();
     g.players[0].degrees = ["juniorCollege"];
