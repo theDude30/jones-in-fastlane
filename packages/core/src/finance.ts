@@ -169,3 +169,24 @@ export function sellTBill(state: GameState, config: GameConfig, events: GameEven
   p.cash += proceeds;
   events.push({ type: "TBillSold", playerId: p.id, proceeds });
 }
+
+export function buyLotteryTickets(state: GameState, config: GameConfig, events: GameEvent[]): void {
+  const p = state.players[state.currentPlayerIndex];
+  if (!p.insideBuilding || p.locationId !== "blacksMarket") {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "wrong location" });
+    return;
+  }
+  const cost = config.constants.lotteryBatchPrice;
+  if (p.cash < cost) {
+    events.push({ type: "NotEnoughMoney", playerId: p.id, action: "BuyLotteryTickets" });
+    return;
+  }
+  p.cash -= cost;
+  p.lotteryTickets += config.constants.lotteryBatchSize;
+  events.push({
+    type: "LotteryTicketsBought",
+    playerId: p.id,
+    ticketCount: config.constants.lotteryBatchSize,
+    totalCost: cost,
+  });
+}

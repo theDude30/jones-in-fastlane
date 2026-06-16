@@ -279,3 +279,47 @@ describe("ExitBuilding clears brokerMenuOpen", () => {
     expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "broker not open" });
   });
 });
+
+function lotteryGame(): GameState {
+  const state = createInitialGame(testConfig, 0, [
+    { name: "A", isAI: false, goals: { wealth: 50, happiness: 50, education: 50, career: 50 } },
+  ]);
+  state.players[0].locationId = "blacksMarket";
+  state.players[0].insideBuilding = true;
+  state.players[0].cash = 100;
+  return state;
+}
+
+describe("BuyLotteryTickets", () => {
+  it("decreases cash by 10, adds 10 lotteryTickets", () => {
+    const { state } = reduce(lotteryGame(), { type: "BuyLotteryTickets" }, testConfig);
+    expect(state.players[0].cash).toBe(90);
+    expect(state.players[0].lotteryTickets).toBe(10);
+  });
+
+  it("emits LotteryTicketsBought with ticketCount=10, totalCost=10", () => {
+    const { events } = reduce(lotteryGame(), { type: "BuyLotteryTickets" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "LotteryTicketsBought", ticketCount: 10, totalCost: 10 });
+  });
+
+  it("buying twice gives 20 tickets total and deducts 20 cash", () => {
+    const { state: s1 } = reduce(lotteryGame(), { type: "BuyLotteryTickets" }, testConfig);
+    const { state: s2 } = reduce(s1, { type: "BuyLotteryTickets" }, testConfig);
+    expect(s2.players[0].lotteryTickets).toBe(20);
+    expect(s2.players[0].cash).toBe(80);
+  });
+
+  it("NotEnoughMoney when cash < 10", () => {
+    const state = lotteryGame();
+    state.players[0].cash = 5;
+    const { events } = reduce(state, { type: "BuyLotteryTickets" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "NotEnoughMoney" });
+  });
+
+  it("InvalidAction when not at blacksMarket", () => {
+    const state = lotteryGame();
+    state.players[0].locationId = "bank";
+    const { events } = reduce(state, { type: "BuyLotteryTickets" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "wrong location" });
+  });
+});
