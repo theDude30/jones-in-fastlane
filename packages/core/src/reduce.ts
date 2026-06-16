@@ -13,7 +13,13 @@ function current(state: GameState): PlayerState {
 function cloneState(state: GameState): GameState {
   return {
     ...state,
-    players: state.players.map((p) => ({ ...p, clothing: { ...p.clothing }, degrees: [...p.degrees], goals: { ...p.goals } })),
+    players: state.players.map((p) => ({
+      ...p,
+      clothing: { ...p.clothing },
+      degrees: [...p.degrees],
+      enrollments: p.enrollments.map((e) => ({ ...e })),
+      goals: { ...p.goals },
+    })),
     rng: { ...state.rng },
     winners: [...state.winners],
     economy: { ...state.economy },

@@ -27,6 +27,8 @@ export interface PlayerState {
   maxDependibility: number;
   maxExperience: number;
   degrees: DegreeId[];
+  enrollments: Array<{ degreeId: DegreeId; lessonsRemaining: number }>;
+  extraCredit: number;
   jobId: string | null;
   wage: number;
   raisesReceived: number;
@@ -57,7 +59,9 @@ export type Command =
   | { type: "EndTurn" }
   | { type: "ApplyForJob"; jobId: string }
   | { type: "RequestRaise" }
-  | { type: "QuitJob" };
+  | { type: "QuitJob" }
+  | { type: "Enroll"; degreeId: DegreeId }
+  | { type: "Study"; degreeId: DegreeId };
 
 export type GameEvent =
   | { type: "Traveled"; playerId: string; toLocationId: string; hoursSpent: number }
@@ -77,7 +81,11 @@ export type GameEvent =
   | { type: "JobQuit"; playerId: string; jobId: string }
   | { type: "EconomyUpdated"; index: number; reading: number }
   | { type: "CrashOccurred"; severity: "minor" | "moderate" | "major"; week: number }
-  | { type: "BoomOccurred"; week: number };
+  | { type: "BoomOccurred"; week: number }
+  | { type: "Enrolled"; playerId: string; degreeId: DegreeId; fee: number; lessonsRemaining: number }
+  | { type: "Studied"; playerId: string; degreeId: DegreeId; lessonsRemaining: number }
+  | { type: "Graduated"; playerId: string; degreeId: DegreeId }
+  | { type: "NotEnoughMoney"; playerId: string; action: string };
 
 export interface ReduceResult {
   state: GameState;

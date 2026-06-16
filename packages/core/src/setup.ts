@@ -29,6 +29,8 @@ export function createInitialGame(
     maxDependibility: c.initialDependibility,
     maxExperience: c.initialExperience,
     degrees: [],
+    enrollments: [],
+    extraCredit: 0,
     jobId: null,
     wage: 0,
     raisesReceived: 0,
