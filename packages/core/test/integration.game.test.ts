@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { defaultConfig } from "@jones/config";
 import { createInitialGame } from "../src/setup.js";
 import { reduce } from "../src/reduce.js";
-import type { Command, GameState } from "../src/types.js";
+import type { Command, GameState, GameEvent } from "../src/types.js";
 
 function run(state: GameState, commands: Command[]): GameState {
   let s = state;
@@ -55,5 +55,36 @@ describe("headless game", () => {
       if (game.status === "ended") break;
     }
     expect(game.week).toBeGreaterThan(1);
+  });
+});
+
+describe("employment flow", () => {
+  it("solo player can hire at Employment Office and earn money at work", () => {
+    const cmds: Command[] = [
+      { type: "TravelTo", locationId: "employmentOffice" },
+      { type: "EnterBuilding" },
+      { type: "ApplyForJob", jobId: "monolithBurgers.cook" },
+      { type: "ExitBuilding" },
+      { type: "TravelTo", locationId: "monolithBurgers" },
+      { type: "EnterBuilding" },
+      { type: "Work" },
+      { type: "EndTurn" },
+    ];
+
+    let state = createInitialGame(defaultConfig, 42, [
+      { name: "Solo", isAI: false, goals: { wealth: 100, happiness: 100, education: 100, career: 100 } },
+    ]);
+    const allEvents: GameEvent[] = [];
+    for (const cmd of cmds) {
+      const result = reduce(state, cmd, defaultConfig);
+      state = result.state;
+      allEvents.push(...result.events);
+    }
+
+    expect(state.players[0].jobId).toBe("monolithBurgers.cook");
+    expect(state.players[0].cash).toBeGreaterThan(200);
+    expect(state.week).toBe(2);
+    expect(allEvents.some((e) => e.type === "EconomyUpdated")).toBe(true);
+    expect(allEvents.some((e) => e.type === "JobApplied" && e.jobId === "monolithBurgers.cook")).toBe(true);
   });
 });
