@@ -193,3 +193,53 @@ describe("education flow", () => {
     expect(p.enrollments.find((e) => e.degreeId === "juniorCollege")).toBeUndefined();
   });
 });
+
+describe("financial flow", () => {
+  it("player deposits, uses broker, and buys lottery tickets", () => {
+    const config = { ...defaultConfig, economy: constantEconomyConfig };
+    let state = createInitialGame(config, 0, [
+      { name: "A", isAI: false, goals: { wealth: 50, happiness: 50, education: 50, career: 50 } },
+    ]);
+    state.players[0].cash = 5000;
+    const allEvents: GameEvent[] = [];
+
+    function step(cmd: Parameters<typeof reduce>[1]) {
+      const r = reduce(state, cmd, config);
+      state = r.state;
+      allEvents.push(...r.events);
+    }
+
+    // Travel to bank, deposit $500, open broker, buy gold, buy T-bill, exit
+    step({ type: "TravelTo", locationId: "bank" });
+    step({ type: "EnterBuilding" });
+    step({ type: "Deposit", amount: 500 });
+    step({ type: "OpenBroker" });
+    step({ type: "BuyStock", stockId: "gold" });  // costs $413
+    step({ type: "BuyTBill" });                    // costs $100
+    step({ type: "ExitBuilding" });
+
+    // brokerMenuOpen cleared after exit
+    expect(state.players[0].brokerMenuOpen).toBe(false);
+
+    // SellTBill after broker closed → InvalidAction
+    const { events: afterExit } = reduce(state, { type: "SellTBill" }, config);
+    expect(afterExit[0]).toMatchObject({ type: "InvalidAction", reason: "broker not open" });
+
+    // Travel to Black's Market, buy lottery tickets
+    step({ type: "TravelTo", locationId: "blacksMarket" });
+    step({ type: "EnterBuilding" });
+    step({ type: "BuyLotteryTickets" });
+
+    const p = state.players[0];
+    // cash: 5000 - 500 (deposit) - 413 (gold) - 100 (tbill) - 10 (lottery) = 3977
+    expect(p.cash).toBe(3977);
+    expect(p.bank).toBe(500);
+    expect(p.stocks.gold).toBe(1);
+    expect(p.tBills).toBe(1);
+    expect(p.lotteryTickets).toBe(10);
+
+    expect(allEvents.some((e) => e.type === "Deposited")).toBe(true);
+    expect(allEvents.some((e) => e.type === "StockBought")).toBe(true);
+    expect(allEvents.some((e) => e.type === "LotteryTicketsBought")).toBe(true);
+  });
+});
