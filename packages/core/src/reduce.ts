@@ -4,6 +4,7 @@ import { travelHours } from "./travel.js";
 import { findJob, meetsUniform } from "./work.js";
 import { advanceTurn } from "./turn.js";
 import { makeEconomy } from "./economy.js";
+import { applyForJob, requestRaise, quitJob } from "./hire.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
@@ -103,6 +104,18 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
     case "EndTurn": {
       events.push({ type: "TurnEnded", playerId: p.id });
       advanceTurn(next, config, events, economy);
+      break;
+    }
+    case "ApplyForJob": {
+      applyForJob(command.jobId, next, config, economy, events);
+      break;
+    }
+    case "RequestRaise": {
+      requestRaise(next, config, economy, events);
+      break;
+    }
+    case "QuitJob": {
+      quitJob(next, events);
       break;
     }
     default:
