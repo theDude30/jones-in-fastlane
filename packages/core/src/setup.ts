@@ -1,0 +1,49 @@
+import type { GameConfig } from "@jones/config";
+import type { GameState, GoalTargets, PlayerState } from "./types.js";
+
+export interface PlayerSetup {
+  name: string;
+  isAI: boolean;
+  goals: GoalTargets;
+}
+
+export function createInitialGame(
+  config: GameConfig,
+  seed: number,
+  setups: PlayerSetup[],
+): GameState {
+  const c = config.constants;
+  if (setups.length < 1 || setups.length > c.maxPlayers) {
+    throw new Error(`player count must be 1..${c.maxPlayers}`);
+  }
+  const players: PlayerState[] = setups.map((s, i) => ({
+    id: `p${i}`,
+    name: s.name,
+    isAI: s.isAI,
+    cash: c.initialCash,
+    bank: 0,
+    happiness: 0,
+    dependibility: c.initialDependibility,
+    experience: c.initialExperience,
+    relaxation: c.initialRelaxation,
+    maxDependibility: c.initialDependibility,
+    maxExperience: c.initialExperience,
+    degrees: [],
+    jobId: null,
+    wage: 0,
+    locationId: c.homeLocationId,
+    insideBuilding: false,
+    clothing: { casual: c.initialCasualWeeks, dress: 0, business: 0 },
+    goals: { ...s.goals },
+    hoursRemaining: c.hoursPerTurn,
+  }));
+  return {
+    week: 1,
+    currentPlayerIndex: 0,
+    players,
+    economyReading: 0,
+    rng: { seed },
+    status: "playing",
+    winners: [],
+  };
+}
