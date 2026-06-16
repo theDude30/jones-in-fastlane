@@ -1,4 +1,4 @@
-import type { DegreeId, UniformLevel } from "@jones/config";
+import type { DegreeId, ItemId, UniformLevel } from "@jones/config";
 import type { RngState } from "./rng.js";
 
 export interface GoalTargets {
@@ -37,6 +37,11 @@ export interface PlayerState {
   clothing: ClothingWeeks;
   goals: GoalTargets;
   hoursRemaining: number;
+  fastFood: number;
+  freshFood: number;
+  durables: Array<{ itemId: ItemId; pricePaid: number }>;
+  tickets: { baseball: number; theatre: number; concert: number };
+  happyGroupsThisTurn: string[];
 }
 
 export type GameStatus = "playing" | "ended";
@@ -61,7 +66,8 @@ export type Command =
   | { type: "RequestRaise" }
   | { type: "QuitJob" }
   | { type: "Enroll"; degreeId: DegreeId }
-  | { type: "Study"; degreeId: DegreeId };
+  | { type: "Study"; degreeId: DegreeId }
+  | { type: "BuyItem"; itemId: ItemId };
 
 export type GameEvent =
   | { type: "Traveled"; playerId: string; toLocationId: string; hoursSpent: number }
@@ -85,7 +91,8 @@ export type GameEvent =
   | { type: "Enrolled"; playerId: string; degreeId: DegreeId; fee: number; lessonsRemaining: number }
   | { type: "Studied"; playerId: string; degreeId: DegreeId; lessonsRemaining: number }
   | { type: "Graduated"; playerId: string; degreeId: DegreeId }
-  | { type: "NotEnoughMoney"; playerId: string; action: string };
+  | { type: "NotEnoughMoney"; playerId: string; action: string }
+  | { type: "ItemBought"; playerId: string; itemId: ItemId; price: number; happinessGained: number; extraCreditGained: number };
 
 export interface ReduceResult {
   state: GameState;

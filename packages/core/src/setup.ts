@@ -39,6 +39,11 @@ export function createInitialGame(
     clothing: { casual: c.initialCasualWeeks, dress: 0, business: 0 },
     goals: { ...s.goals },
     hoursRemaining: c.hoursPerTurn,
+    fastFood: 0,
+    freshFood: 0,
+    durables: [],
+    tickets: { baseball: 0, theatre: 0, concert: 0 },
+    happyGroupsThisTurn: [],
   }));
   return {
     week: 1,
