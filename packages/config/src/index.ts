@@ -5,5 +5,6 @@ export { actionCosts } from "./actionCosts.js";
 export { locations } from "./locations.js";
 export { jobs } from "./jobs.js";
 export { degrees } from "./degrees.js";
+export { items } from "./items.js";
 export { defaultConfig } from "./defaultConfig.js";
 export { defaultEconomyConfig, constantEconomyConfig } from "./economyConfig.js";

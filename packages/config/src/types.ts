@@ -72,6 +72,7 @@ export interface GameConfig {
   jobs: JobDef[];
   economy: EconomyConfig;
   degrees: DegreeDef[];
+  items: ItemDef[];
 }
 
 export interface EconomyConfig {
@@ -88,4 +89,43 @@ export interface DegreeDef {
   id: DegreeId;
   name: string;
   prereqs: DegreeId[];
+}
+
+export type ItemId =
+  | "fries" | "hamburgers" | "cheeseburger" | "astroChicken"
+  | "colasDrink" | "shakesDrink"
+  | "freshFood1Wk" | "freshFood2Wk" | "freshFood4Wk"
+  | "casualClothesQT" | "casualClothesZMart"
+  | "dressClothesQT" | "dressClothesZMart"
+  | "businessSuit"
+  | "refrigeratorSocket" | "freezerSocket" | "stoveSocket" | "microwaveSocket"
+  | "colorTVSocket" | "vcrSocket" | "stereoSocket" | "hotTubSocket" | "computerSocket"
+  | "refrigeratorZMart" | "stoveZMart" | "microwaveZMart"
+  | "colorTVZMart" | "vcrZMart" | "stereoZMart" | "bwTVZMart"
+  | "encyclopedia" | "dictionary" | "atlas"
+  | "dogFood" | "eightTrackPlayer" | "worksOfCapote"
+  | "newspaper"
+  | "baseballTicket" | "theatreTicket" | "concertTicket";
+
+export type DurableType =
+  | "refrigerator" | "freezer" | "stove" | "microwave"
+  | "colorTV" | "vcr" | "stereo" | "bwTV" | "hotTub" | "computer"
+  | "encyclopedia" | "dictionary" | "atlas";
+
+export interface ItemDef {
+  id: ItemId;
+  category: "fastFood" | "softDrink" | "freshFood" | "clothes"
+          | "durable" | "book" | "junk" | "ticket" | "newspaper";
+  locationId: string;
+  basePrice: number;
+  fixedPrice?: true;
+  happinessOnBuy?: number;
+  happinessGroup?: string;
+  clothingCategory?: "casual" | "dress" | "business";
+  clothingWeeks?: number;
+  durableType?: DurableType;
+  breakChanceInverse?: number;
+  wildWillyProof?: boolean;
+  freshFoodWeeks?: number;
+  ticketType?: "baseball" | "theatre" | "concert";
 }
