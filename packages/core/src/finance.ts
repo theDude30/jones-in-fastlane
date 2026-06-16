@@ -1,4 +1,4 @@
-import type { GameConfig } from "@jones/config";
+import type { GameConfig, StockId } from "@jones/config";
 import type { GameEvent, GameState, PlayerState } from "./types.js";
 
 function playerAtBank(state: GameState, events: GameEvent[]): PlayerState | null {
@@ -87,4 +87,88 @@ export function applyLoan(state: GameState, config: GameConfig, events: GameEven
   p.loanDueWeek = dueWeek;
   p.happiness += 5;
   events.push({ type: "LoanApproved", playerId: p.id, amount: loanSize, dueWeek, happinessGained: 5 });
+}
+
+export function openBroker(state: GameState, config: GameConfig, events: GameEvent[]): void {
+  const p = playerAtBank(state, events);
+  if (!p) return;
+  if (p.hoursRemaining < config.actionCosts.broker) {
+    events.push({ type: "NotEnoughTime", playerId: p.id, action: "OpenBroker" });
+    return;
+  }
+  p.hoursRemaining -= config.actionCosts.broker;
+  p.brokerMenuOpen = true;
+  events.push({ type: "BrokerOpened", playerId: p.id });
+}
+
+export function buyStock(stockId: StockId, state: GameState, config: GameConfig, events: GameEvent[]): void {
+  const p = state.players[state.currentPlayerIndex];
+  if (!p.brokerMenuOpen) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "broker not open" });
+    return;
+  }
+  if (!config.stocks.some((s) => s.id === stockId)) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "unknown stock" });
+    return;
+  }
+  const price = state.stockPrices[stockId];
+  if (p.cash < price) {
+    events.push({ type: "NotEnoughMoney", playerId: p.id, action: "BuyStock" });
+    return;
+  }
+  p.cash -= price;
+  p.stocks[stockId] += 1;
+  events.push({ type: "StockBought", playerId: p.id, stockId, price });
+}
+
+export function sellStock(stockId: StockId, state: GameState, config: GameConfig, events: GameEvent[]): void {
+  const p = state.players[state.currentPlayerIndex];
+  if (!p.brokerMenuOpen) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "broker not open" });
+    return;
+  }
+  if (!config.stocks.some((s) => s.id === stockId)) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "unknown stock" });
+    return;
+  }
+  if (p.stocks[stockId] < 1) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "no shares to sell" });
+    return;
+  }
+  const price = state.stockPrices[stockId];
+  p.stocks[stockId] -= 1;
+  p.cash += price;
+  events.push({ type: "StockSold", playerId: p.id, stockId, price });
+}
+
+export function buyTBill(state: GameState, config: GameConfig, events: GameEvent[]): void {
+  const p = state.players[state.currentPlayerIndex];
+  if (!p.brokerMenuOpen) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "broker not open" });
+    return;
+  }
+  const price = config.constants.tBillBuyPrice;
+  if (p.cash < price) {
+    events.push({ type: "NotEnoughMoney", playerId: p.id, action: "BuyTBill" });
+    return;
+  }
+  p.cash -= price;
+  p.tBills += 1;
+  events.push({ type: "TBillBought", playerId: p.id, price });
+}
+
+export function sellTBill(state: GameState, config: GameConfig, events: GameEvent[]): void {
+  const p = state.players[state.currentPlayerIndex];
+  if (!p.brokerMenuOpen) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "broker not open" });
+    return;
+  }
+  if (p.tBills < 1) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "no T-bills to sell" });
+    return;
+  }
+  const proceeds = config.constants.tBillSellPrice;
+  p.tBills -= 1;
+  p.cash += proceeds;
+  events.push({ type: "TBillSold", playerId: p.id, proceeds });
 }

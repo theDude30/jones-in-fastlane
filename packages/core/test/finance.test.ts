@@ -140,3 +140,142 @@ describe("ApplyLoan", () => {
     expect(events[0]).toMatchObject({ type: "NotEnoughTime", action: "ApplyLoan" });
   });
 });
+
+function brokerGame(): GameState {
+  const state = bankGame();
+  state.players[0].brokerMenuOpen = true;
+  return state;
+}
+
+describe("OpenBroker", () => {
+  it("deducts 2h, sets brokerMenuOpen=true, emits BrokerOpened", () => {
+    const { state, events } = reduce(bankGame(), { type: "OpenBroker" }, testConfig);
+    expect(state.players[0].hoursRemaining).toBe(58);
+    expect(state.players[0].brokerMenuOpen).toBe(true);
+    expect(events[0]).toMatchObject({ type: "BrokerOpened" });
+  });
+
+  it("InvalidAction when not at bank", () => {
+    const state = bankGame();
+    state.players[0].locationId = "zMart";
+    const { events } = reduce(state, { type: "OpenBroker" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "wrong location" });
+  });
+
+  it("NotEnoughTime when hoursRemaining < broker cost", () => {
+    const state = bankGame();
+    state.players[0].hoursRemaining = 1;
+    const { events } = reduce(state, { type: "OpenBroker" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "NotEnoughTime", action: "OpenBroker" });
+  });
+});
+
+describe("BuyStock", () => {
+  it("InvalidAction when brokerMenuOpen=false", () => {
+    const { events } = reduce(bankGame(), { type: "BuyStock", stockId: "gold" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "broker not open" });
+  });
+
+  it("buys gold: cash decreases by base price, stocks.gold=1", () => {
+    // gold basePrice = 413; stockPrices initialized to basePrice
+    const { state } = reduce(brokerGame(), { type: "BuyStock", stockId: "gold" }, testConfig);
+    expect(state.players[0].cash).toBe(5000 - 413);
+    expect(state.players[0].stocks.gold).toBe(1);
+  });
+
+  it("emits StockBought with stockId and price", () => {
+    const { events } = reduce(brokerGame(), { type: "BuyStock", stockId: "gold" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "StockBought", stockId: "gold", price: 413 });
+  });
+
+  it("NotEnoughMoney when cash < stock price", () => {
+    const state = brokerGame();
+    state.players[0].cash = 0;
+    const { events } = reduce(state, { type: "BuyStock", stockId: "gold" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "NotEnoughMoney" });
+  });
+
+  it("can buy multiple different stocks in one broker session", () => {
+    const { state: s1 } = reduce(brokerGame(), { type: "BuyStock", stockId: "gold" }, testConfig);
+    const { state: s2 } = reduce(s1, { type: "BuyStock", stockId: "silver" }, testConfig);
+    expect(s2.players[0].stocks.gold).toBe(1);
+    expect(s2.players[0].stocks.silver).toBe(1);
+  });
+});
+
+describe("SellStock", () => {
+  it("InvalidAction when 0 shares owned", () => {
+    const { events } = reduce(brokerGame(), { type: "SellStock", stockId: "gold" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "no shares to sell" });
+  });
+
+  it("decrements holdings and increases cash by price", () => {
+    const state = brokerGame();
+    state.players[0].stocks.gold = 2;
+    state.players[0].cash = 0;
+    const { state: s } = reduce(state, { type: "SellStock", stockId: "gold" }, testConfig);
+    expect(s.players[0].stocks.gold).toBe(1);
+    expect(s.players[0].cash).toBe(413);
+  });
+});
+
+describe("BuyTBill", () => {
+  it("decreases cash by 100, increments tBills", () => {
+    const { state } = reduce(brokerGame(), { type: "BuyTBill" }, testConfig);
+    expect(state.players[0].cash).toBe(4900);
+    expect(state.players[0].tBills).toBe(1);
+  });
+
+  it("emits TBillBought with price=100", () => {
+    const { events } = reduce(brokerGame(), { type: "BuyTBill" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "TBillBought", price: 100 });
+  });
+
+  it("NotEnoughMoney when cash < 100", () => {
+    const state = brokerGame();
+    state.players[0].cash = 50;
+    const { events } = reduce(state, { type: "BuyTBill" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "NotEnoughMoney" });
+  });
+});
+
+describe("SellTBill", () => {
+  it("decrements tBills and increases cash by 97", () => {
+    const state = brokerGame();
+    state.players[0].tBills = 1;
+    state.players[0].cash = 0;
+    const { state: s } = reduce(state, { type: "SellTBill" }, testConfig);
+    expect(s.players[0].tBills).toBe(0);
+    expect(s.players[0].cash).toBe(97);
+  });
+
+  it("emits TBillSold with proceeds=97", () => {
+    const state = brokerGame();
+    state.players[0].tBills = 1;
+    const { events } = reduce(state, { type: "SellTBill" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "TBillSold", proceeds: 97 });
+  });
+
+  it("InvalidAction when tBills=0", () => {
+    const { events } = reduce(brokerGame(), { type: "SellTBill" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "no T-bills to sell" });
+  });
+});
+
+describe("ExitBuilding clears brokerMenuOpen", () => {
+  it("brokerMenuOpen becomes false after ExitBuilding", () => {
+    const { state: s1 } = reduce(bankGame(), { type: "OpenBroker" }, testConfig);
+    expect(s1.players[0].brokerMenuOpen).toBe(true);
+    const { state: s2 } = reduce(s1, { type: "ExitBuilding" }, testConfig);
+    expect(s2.players[0].brokerMenuOpen).toBe(false);
+  });
+
+  it("BuyStock after ExitBuilding → InvalidAction", () => {
+    const { state: s1 } = reduce(bankGame(), { type: "OpenBroker" }, testConfig);
+    const { state: s2 } = reduce(s1, { type: "ExitBuilding" }, testConfig);
+    // re-enter building to isolate the brokerMenuOpen guard
+    s2.players[0].insideBuilding = true;
+    const { events } = reduce(s2, { type: "BuyStock", stockId: "gold" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "broker not open" });
+  });
+});

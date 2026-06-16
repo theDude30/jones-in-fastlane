@@ -7,7 +7,7 @@ import { makeEconomy } from "./economy.js";
 import { applyForJob, requestRaise, quitJob } from "./hire.js";
 import { enroll, study } from "./education.js";
 import { buyItem } from "./shopping.js";
-import { deposit, withdraw, applyLoan } from "./finance.js";
+import { deposit, withdraw, applyLoan, openBroker, buyStock, sellStock, buyTBill, sellTBill } from "./finance.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
@@ -77,6 +77,7 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
         break;
       }
       p.insideBuilding = false;
+      p.brokerMenuOpen = false;
       events.push({ type: "ExitedBuilding", playerId: p.id, locationId: p.locationId });
       break;
     }
@@ -152,6 +153,21 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
       break;
     case "ApplyLoan":
       applyLoan(next, config, events);
+      break;
+    case "OpenBroker":
+      openBroker(next, config, events);
+      break;
+    case "BuyStock":
+      buyStock(command.stockId, next, config, events);
+      break;
+    case "SellStock":
+      sellStock(command.stockId, next, config, events);
+      break;
+    case "BuyTBill":
+      buyTBill(next, config, events);
+      break;
+    case "SellTBill":
+      sellTBill(next, config, events);
       break;
     default:
       events.push({ type: "InvalidAction", playerId: p.id, reason: `unhandled command ${(command as Command).type}` });
