@@ -1,4 +1,4 @@
-import type { DegreeId, ItemId, UniformLevel } from "@jones/config";
+import type { DegreeId, ItemId, StockId, UniformLevel } from "@jones/config";
 import type { RngState } from "./rng.js";
 
 export interface GoalTargets {
@@ -42,6 +42,14 @@ export interface PlayerState {
   durables: Array<{ itemId: ItemId; pricePaid: number }>;
   tickets: { baseball: number; theatre: number; concert: number };
   happyGroupsThisTurn: string[];
+  stocks: Record<StockId, number>;
+  tBills: number;
+  loanBalance: number;
+  loanDueWeek: number | null;
+  timesDefaulted: number;
+  loanInDefault: boolean;
+  brokerMenuOpen: boolean;
+  lotteryTickets: number;
 }
 
 export type GameStatus = "playing" | "ended";
@@ -54,6 +62,7 @@ export interface GameState {
   rng: RngState;
   status: GameStatus;
   winners: string[];
+  stockPrices: Record<StockId, number>;
 }
 
 export type Command =
@@ -67,7 +76,16 @@ export type Command =
   | { type: "QuitJob" }
   | { type: "Enroll"; degreeId: DegreeId }
   | { type: "Study"; degreeId: DegreeId }
-  | { type: "BuyItem"; itemId: ItemId };
+  | { type: "BuyItem"; itemId: ItemId }
+  | { type: "Deposit"; amount: number }
+  | { type: "Withdraw"; amount: number }
+  | { type: "ApplyLoan" }
+  | { type: "OpenBroker" }
+  | { type: "BuyStock"; stockId: StockId }
+  | { type: "SellStock"; stockId: StockId }
+  | { type: "BuyTBill" }
+  | { type: "SellTBill" }
+  | { type: "BuyLotteryTickets" };
 
 export type GameEvent =
   | { type: "Traveled"; playerId: string; toLocationId: string; hoursSpent: number }
@@ -92,7 +110,17 @@ export type GameEvent =
   | { type: "Studied"; playerId: string; degreeId: DegreeId; lessonsRemaining: number }
   | { type: "Graduated"; playerId: string; degreeId: DegreeId }
   | { type: "NotEnoughMoney"; playerId: string; action: string }
-  | { type: "ItemBought"; playerId: string; itemId: ItemId; price: number; happinessGained: number; extraCreditGained: number };
+  | { type: "ItemBought"; playerId: string; itemId: ItemId; price: number; happinessGained: number; extraCreditGained: number }
+  | { type: "Deposited"; playerId: string; amount: number }
+  | { type: "Withdrawn"; playerId: string; amount: number }
+  | { type: "LoanApproved"; playerId: string; amount: number; dueWeek: number; happinessGained: number }
+  | { type: "LoanDenied"; playerId: string; reason: "unemployed" | "too-risky" | "in-default"; happinessCost: number }
+  | { type: "BrokerOpened"; playerId: string }
+  | { type: "StockBought"; playerId: string; stockId: StockId; price: number }
+  | { type: "StockSold"; playerId: string; stockId: StockId; price: number }
+  | { type: "TBillBought"; playerId: string; price: number }
+  | { type: "TBillSold"; playerId: string; proceeds: number }
+  | { type: "LotteryTicketsBought"; playerId: string; ticketCount: number; totalCost: number };
 
 export interface ReduceResult {
   state: GameState;
