@@ -5,3 +5,4 @@ export { actionCosts } from "./actionCosts.js";
 export { locations } from "./locations.js";
 export { jobs } from "./jobs.js";
 export { defaultConfig } from "./defaultConfig.js";
+export { defaultEconomyConfig, constantEconomyConfig } from "./economyConfig.js";

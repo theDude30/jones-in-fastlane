@@ -64,4 +64,15 @@ export interface GameConfig {
   actionCosts: ActionCosts;
   locations: LocationDef[];
   jobs: JobDef[];
+  economy: EconomyConfig;
+}
+
+export interface EconomyConfig {
+  mode: "dynamic" | "constant";
+  initialIndex: number;
+  initialReading: number;
+  eventStartWeek: number;
+  crashReadingThreshold: number;
+  crashProbabilityBase: number;
+  boomProbabilityBase: number;
 }

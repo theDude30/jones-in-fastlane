@@ -66,16 +66,15 @@ play are designed-for and built afterward.
 
 | Phase | Status | Description |
 |------|--------|-------------|
-| **M1 — Logic core + config** | In progress | Port the rules to a deterministic, headless, fully-tested TypeScript core, seeded from the logic reference. No graphics. |
-| **M2 — AI players** | Planned | Port the plan-based AI agents; they play full games headlessly. Difficulty via config. |
-| **M3 — Rendering + UI + audio** | Planned | PixiJS board + responsive React UI + drop-in audio, wired to the core. **End of M3 = MVP:** full local game, solo-vs-AI and hotseat, responsive, placeholder 4K-ready art. |
-| **M4 — Mobile packaging** | Future | Capacitor iOS/Android builds for the App Store / Play Store. |
-| **M5 — Online play** | Future | Server-authoritative networked multiplayer + AI-agent-as-player, added on the existing command-driven core. |
+| **M1 — Logic core + config** | Complete | Deterministic, headless, fully-tested TypeScript core: seeded RNG, movement, work, win-check, goals. |
+| **M2 — Economy & Hiring** | In review | Dynamic economy model (weekly index/reading, crash/boom events) and hiring commands (ApplyForJob, RequestRaise, QuitJob). |
+| **M3 — AI players** | Planned | Port the plan-based AI agents; they play full games headlessly. Difficulty via config. |
+| **M4 — Rendering + UI + audio** | Planned | PixiJS board + responsive React UI + drop-in audio, wired to the core. **End of M4 = MVP:** full local game, solo-vs-AI and hotseat, responsive, placeholder 4K-ready art. |
+| **M5 — Mobile packaging** | Future | Capacitor iOS/Android builds for the App Store / Play Store. |
+| **M6 — Online play** | Future | Server-authoritative networked multiplayer + AI-agent-as-player, added on the existing command-driven core. |
 
-The current M1 work is decomposed into bite-sized, test-driven tasks. The first
-executable slice (monorepo, config, deterministic state machine, and a runnable
-turn loop with movement/work/win-check) is described in
-[`docs/superpowers/plans/2026-06-15-m1-core-foundation.md`](docs/superpowers/plans/2026-06-15-m1-core-foundation.md).
+The M1 core is complete. M2 (Economy & Hiring) is in review. Plans are in
+[`docs/superpowers/plans/`](docs/superpowers/plans/).
 
 ## Documentation
 
@@ -90,5 +89,6 @@ Howler.js (audio) · Capacitor (mobile) · Vite.
 
 ## Status
 
-Early development. The design, an authoritative game-logic reference, and the first
-implementation plan are complete; the logic core is being built next.
+M1 (logic core) is complete: deterministic state machine, movement, work, win-check,
+67 tests passing. M2 (Economy & Hiring) is in review — dynamic economy model and
+ApplyForJob / RequestRaise / QuitJob commands are implemented and tested.

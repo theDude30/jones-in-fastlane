@@ -3,18 +3,20 @@ import type { Command, GameEvent, GameState, PlayerState, ReduceResult } from ".
 import { travelHours } from "./travel.js";
 import { findJob, meetsUniform } from "./work.js";
 import { advanceTurn } from "./turn.js";
+import { makeEconomy } from "./economy.js";
+import { applyForJob, requestRaise, quitJob } from "./hire.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
 }
 
-/** Returns a deep-ish clone safe to mutate for the current player. */
 function cloneState(state: GameState): GameState {
   return {
     ...state,
     players: state.players.map((p) => ({ ...p, clothing: { ...p.clothing }, degrees: [...p.degrees], goals: { ...p.goals } })),
     rng: { ...state.rng },
     winners: [...state.winners],
+    economy: { ...state.economy },
   };
 }
 
@@ -22,6 +24,7 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
   const events: GameEvent[] = [];
   const next = cloneState(state);
   const p = current(next);
+  const economy = makeEconomy(config);
 
   switch (command.type) {
     case "TravelTo": {
@@ -77,7 +80,6 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
         events.push({ type: "NotEnoughTime", playerId: p.id, action: "Work" });
         break;
       }
-      // §6: fired if dependibility is 5+ below requirement.
       if (p.dependibility < job.reqDependibility - 5) {
         const firedJobId = p.jobId;
         p.jobId = null;
@@ -101,7 +103,19 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
     }
     case "EndTurn": {
       events.push({ type: "TurnEnded", playerId: p.id });
-      advanceTurn(next, config, events);
+      advanceTurn(next, config, events, economy);
+      break;
+    }
+    case "ApplyForJob": {
+      applyForJob(command.jobId, next, config, economy, events);
+      break;
+    }
+    case "RequestRaise": {
+      requestRaise(next, config, economy, events);
+      break;
+    }
+    case "QuitJob": {
+      quitJob(next, events);
       break;
     }
     default:
