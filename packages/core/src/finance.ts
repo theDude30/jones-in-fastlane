@@ -10,6 +10,15 @@ function playerAtBank(state: GameState, events: GameEvent[]): PlayerState | null
   return p;
 }
 
+function playerWithBrokerOpen(state: GameState, events: GameEvent[]): PlayerState | null {
+  const p = state.players[state.currentPlayerIndex];
+  if (!p.brokerMenuOpen) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "broker not open" });
+    return null;
+  }
+  return p;
+}
+
 export function deposit(amount: number, state: GameState, events: GameEvent[]): void {
   const p = playerAtBank(state, events);
   if (!p) return;
@@ -102,11 +111,8 @@ export function openBroker(state: GameState, config: GameConfig, events: GameEve
 }
 
 export function buyStock(stockId: StockId, state: GameState, config: GameConfig, events: GameEvent[]): void {
-  const p = state.players[state.currentPlayerIndex];
-  if (!p.brokerMenuOpen) {
-    events.push({ type: "InvalidAction", playerId: p.id, reason: "broker not open" });
-    return;
-  }
+  const p = playerWithBrokerOpen(state, events);
+  if (!p) return;
   if (!config.stocks.some((s) => s.id === stockId)) {
     events.push({ type: "InvalidAction", playerId: p.id, reason: "unknown stock" });
     return;
@@ -122,11 +128,8 @@ export function buyStock(stockId: StockId, state: GameState, config: GameConfig,
 }
 
 export function sellStock(stockId: StockId, state: GameState, config: GameConfig, events: GameEvent[]): void {
-  const p = state.players[state.currentPlayerIndex];
-  if (!p.brokerMenuOpen) {
-    events.push({ type: "InvalidAction", playerId: p.id, reason: "broker not open" });
-    return;
-  }
+  const p = playerWithBrokerOpen(state, events);
+  if (!p) return;
   if (!config.stocks.some((s) => s.id === stockId)) {
     events.push({ type: "InvalidAction", playerId: p.id, reason: "unknown stock" });
     return;
@@ -142,11 +145,8 @@ export function sellStock(stockId: StockId, state: GameState, config: GameConfig
 }
 
 export function buyTBill(state: GameState, config: GameConfig, events: GameEvent[]): void {
-  const p = state.players[state.currentPlayerIndex];
-  if (!p.brokerMenuOpen) {
-    events.push({ type: "InvalidAction", playerId: p.id, reason: "broker not open" });
-    return;
-  }
+  const p = playerWithBrokerOpen(state, events);
+  if (!p) return;
   const price = config.constants.tBillBuyPrice;
   if (p.cash < price) {
     events.push({ type: "NotEnoughMoney", playerId: p.id, action: "BuyTBill" });
@@ -158,11 +158,8 @@ export function buyTBill(state: GameState, config: GameConfig, events: GameEvent
 }
 
 export function sellTBill(state: GameState, config: GameConfig, events: GameEvent[]): void {
-  const p = state.players[state.currentPlayerIndex];
-  if (!p.brokerMenuOpen) {
-    events.push({ type: "InvalidAction", playerId: p.id, reason: "broker not open" });
-    return;
-  }
+  const p = playerWithBrokerOpen(state, events);
+  if (!p) return;
   if (p.tBills < 1) {
     events.push({ type: "InvalidAction", playerId: p.id, reason: "no T-bills to sell" });
     return;
