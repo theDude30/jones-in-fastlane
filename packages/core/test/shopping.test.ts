@@ -200,6 +200,13 @@ describe("Books", () => {
     expect(s3.players[0].extraCredit).toBe(1);
     expect(events[0]).toMatchObject({ type: "ItemBought", extraCreditGained: 1 });
   });
+
+  it("InvalidAction buying a second copy of the same book", () => {
+    const state = shopGame("zMart");
+    const { state: s1 } = buy(state, "encyclopedia");
+    const { events } = buy(s1, "encyclopedia");
+    expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "already owned" });
+  });
 });
 
 describe("Junk", () => {

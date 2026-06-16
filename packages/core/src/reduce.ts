@@ -6,6 +6,7 @@ import { advanceTurn } from "./turn.js";
 import { makeEconomy } from "./economy.js";
 import { applyForJob, requestRaise, quitJob } from "./hire.js";
 import { enroll, study } from "./education.js";
+import { buyItem } from "./shopping.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
@@ -134,6 +135,10 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
     }
     case "Study": {
       study(command.degreeId, next, config, events);
+      break;
+    }
+    case "BuyItem": {
+      buyItem(command.itemId, next, config, economy, events);
       break;
     }
     default:

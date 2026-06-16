@@ -61,7 +61,7 @@ export function buyItem(
   } else if (item.category === "ticket") {
     p.tickets[item.ticketType!] += 1;
   }
-  // junk: no inventory change
+  // softDrink/junk: no inventory change
 
   let happinessGained = 0;
   const rawHappiness = item.happinessOnBuy ?? 0;

@@ -91,6 +91,63 @@ describe("employment flow", () => {
   });
 });
 
+describe("shopping flow", () => {
+  it("player buys fast food, clothes, a durable, and the full book set", () => {
+    const config = { ...defaultConfig, economy: constantEconomyConfig };
+    let state = createInitialGame(config, 0, [
+      { name: "A", isAI: false, goals: { wealth: 50, happiness: 50, education: 50, career: 50 } },
+    ]);
+    state.players[0].cash = 5000; // override $200 initial; computerSocket costs $1,599
+    const allEvents: GameEvent[] = [];
+
+    function step(cmd: Parameters<typeof reduce>[1]) {
+      const r = reduce(state, cmd, config);
+      state = r.state;
+      allEvents.push(...r.events);
+    }
+
+    // Travel to Monolith Burgers and enter
+    step({ type: "TravelTo", locationId: "monolithBurgers" });
+    step({ type: "EnterBuilding" });
+    step({ type: "BuyItem", itemId: "astroChicken" });  // +2 happiness, fastFood=1
+
+    // Exit, travel to QT Clothing, buy dress clothes
+    step({ type: "ExitBuilding" });
+    step({ type: "TravelTo", locationId: "qtClothing" });
+    step({ type: "EnterBuilding" });
+    step({ type: "BuyItem", itemId: "dressClothesQT" }); // +1 happiness, dress weeks=13
+
+    // Exit, travel to Socket City, buy a computer
+    step({ type: "ExitBuilding" });
+    step({ type: "TravelTo", locationId: "socketCity" });
+    step({ type: "EnterBuilding" });
+    step({ type: "BuyItem", itemId: "computerSocket" }); // +3 happiness, extraCredit=1
+
+    // Exit, travel to Z-Mart, buy all three books
+    step({ type: "ExitBuilding" });
+    step({ type: "TravelTo", locationId: "zMart" });
+    step({ type: "EnterBuilding" });
+    step({ type: "BuyItem", itemId: "encyclopedia" });
+    step({ type: "BuyItem", itemId: "dictionary" });
+    step({ type: "BuyItem", itemId: "atlas" });  // extraCredit = 2 (books complete)
+
+    const p = state.players[0];
+
+    expect(p.fastFood).toBe(1);
+    expect(p.clothing.dress).toBe(13);
+    expect(p.durables.find((d) => d.itemId === "computerSocket")).toBeDefined();
+    expect(p.durables.find((d) => d.itemId === "atlas")).toBeDefined();
+    expect(p.extraCredit).toBe(2); // +1 computer, +1 books set
+    expect(p.happiness).toBe(6);   // +2 astro + 1 dress + 3 computer
+
+    const bought = allEvents.filter((e) => e.type === "ItemBought");
+    expect(bought).toHaveLength(6);
+
+    const atlasBought = bought.find((e) => e.type === "ItemBought" && (e as any).itemId === "atlas");
+    expect(atlasBought).toMatchObject({ type: "ItemBought", extraCreditGained: 1 });
+  });
+});
+
 describe("education flow", () => {
   it("solo player can enroll at Hi-Tech U and graduate by studying 10 lessons", () => {
     // Travel home (lowCostHousing, ringIndex 0) to hiTechU (ringIndex 6):
