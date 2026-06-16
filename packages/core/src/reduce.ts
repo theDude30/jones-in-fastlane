@@ -15,6 +15,7 @@ function cloneState(state: GameState): GameState {
     players: state.players.map((p) => ({ ...p, clothing: { ...p.clothing }, degrees: [...p.degrees], goals: { ...p.goals } })),
     rng: { ...state.rng },
     winners: [...state.winners],
+    economy: { ...state.economy },
   };
 }
 

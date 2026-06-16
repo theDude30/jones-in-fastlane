@@ -28,7 +28,8 @@ export interface PlayerState {
   maxExperience: number;
   degrees: DegreeId[];
   jobId: string | null;
-  wage: number;            // current hourly wage (0 if unemployed)
+  wage: number;
+  raisesReceived: number;
   locationId: string;
   insideBuilding: boolean;
   clothing: ClothingWeeks;
@@ -42,10 +43,10 @@ export interface GameState {
   week: number;
   currentPlayerIndex: number;
   players: PlayerState[];
-  economyReading: number;  // §5; static in this plan (0), dynamic later
+  economy: { index: number; reading: number };
   rng: RngState;
   status: GameStatus;
-  winners: string[];       // player ids, in order of winning
+  winners: string[];
 }
 
 export type Command =
@@ -53,7 +54,10 @@ export type Command =
   | { type: "EnterBuilding" }
   | { type: "ExitBuilding" }
   | { type: "Work" }
-  | { type: "EndTurn" };
+  | { type: "EndTurn" }
+  | { type: "ApplyForJob"; jobId: string }
+  | { type: "RequestRaise" }
+  | { type: "QuitJob" };
 
 export type GameEvent =
   | { type: "Traveled"; playerId: string; toLocationId: string; hoursSpent: number }
@@ -65,7 +69,15 @@ export type GameEvent =
   | { type: "InvalidAction"; playerId: string; reason: string }
   | { type: "TurnEnded"; playerId: string }
   | { type: "WeekAdvanced"; week: number }
-  | { type: "PlayerWon"; playerId: string };
+  | { type: "PlayerWon"; playerId: string }
+  | { type: "JobApplied"; playerId: string; jobId: string; wage: number }
+  | { type: "JobDenied"; playerId: string; jobId: string; reason: "stats" | "luck" }
+  | { type: "RaiseGranted"; playerId: string; newWage: number }
+  | { type: "RaiseDenied"; playerId: string; reason: "stats" | "no-higher-offer" }
+  | { type: "JobQuit"; playerId: string; jobId: string }
+  | { type: "EconomyUpdated"; index: number; reading: number }
+  | { type: "CrashOccurred"; severity: "minor" | "moderate" | "major"; week: number }
+  | { type: "BoomOccurred"; week: number };
 
 export interface ReduceResult {
   state: GameState;
