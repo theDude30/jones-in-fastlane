@@ -5,6 +5,7 @@ import { findJob, meetsUniform } from "./work.js";
 import { advanceTurn } from "./turn.js";
 import { makeEconomy } from "./economy.js";
 import { applyForJob, requestRaise, quitJob } from "./hire.js";
+import { enroll, study } from "./education.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
@@ -122,6 +123,14 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
     }
     case "QuitJob": {
       quitJob(next, events);
+      break;
+    }
+    case "Enroll": {
+      enroll(command.degreeId, next, config, economy, events);
+      break;
+    }
+    case "Study": {
+      study(command.degreeId, next, config, events);
       break;
     }
     default:

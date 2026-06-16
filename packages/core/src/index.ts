@@ -8,3 +8,4 @@ export * from "./work.js";
 export * from "./turn.js";
 export * from "./economy.js";
 export * from "./hire.js";
+export * from "./education.js";
