@@ -67,13 +67,14 @@ play are designed-for and built afterward.
 | Phase | Status | Description |
 |------|--------|-------------|
 | **M1 — Logic core + config** | Complete | Deterministic, headless, fully-tested TypeScript core: seeded RNG, movement, work, win-check, goals. |
-| **M2 — Economy & Hiring** | In review | Dynamic economy model (weekly index/reading, crash/boom events) and hiring commands (ApplyForJob, RequestRaise, QuitJob). |
+| **M2 — Economy & Hiring** | Complete | Dynamic economy model (weekly index/reading, crash/boom events) and hiring commands (ApplyForJob, RequestRaise, QuitJob). |
+| **M3a — Education** | In review | Degree enrollment and study mechanics: 11 degrees with prereq chains, enrollment fee, graduation bonuses. |
 | **M3 — AI players** | Planned | Port the plan-based AI agents; they play full games headlessly. Difficulty via config. |
 | **M4 — Rendering + UI + audio** | Planned | PixiJS board + responsive React UI + drop-in audio, wired to the core. **End of M4 = MVP:** full local game, solo-vs-AI and hotseat, responsive, placeholder 4K-ready art. |
 | **M5 — Mobile packaging** | Future | Capacitor iOS/Android builds for the App Store / Play Store. |
 | **M6 — Online play** | Future | Server-authoritative networked multiplayer + AI-agent-as-player, added on the existing command-driven core. |
 
-The M1 core is complete. M2 (Economy & Hiring) is in review. Plans are in
+M1 and M2 are complete. M3a (Education) is in review. Plans are in
 [`docs/superpowers/plans/`](docs/superpowers/plans/).
 
 ## Documentation
@@ -89,6 +90,5 @@ Howler.js (audio) · Capacitor (mobile) · Vite.
 
 ## Status
 
-M1 (logic core) is complete: deterministic state machine, movement, work, win-check,
-67 tests passing. M2 (Economy & Hiring) is in review — dynamic economy model and
-ApplyForJob / RequestRaise / QuitJob commands are implemented and tested.
+M1 and M2 are complete. M3a (Education) is in review — degree enrollment, study,
+and graduation with 11 degrees and prereq chains, 86 tests passing.
