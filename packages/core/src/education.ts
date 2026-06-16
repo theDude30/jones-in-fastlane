@@ -76,7 +76,7 @@ export function study(
     return;
   }
 
-  if (p.hoursRemaining === 0) {
+  if (p.hoursRemaining <= 0) {
     events.push({ type: "NotEnoughTime", playerId: p.id, action: "Study" });
     return;
   }
