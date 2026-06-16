@@ -21,4 +21,10 @@ export const constants: GameConstants = {
   graduateDependibilityBonus: 5,
   graduateMaxCapBonus: 5,
   maxEnrollments: 4,
+  tBillBuyPrice: 100,
+  tBillSellPrice: 97,
+  lotteryBatchSize: 10,
+  lotteryBatchPrice: 10,
+  loanPaymentAmount: 50,
+  loanPaymentToDebt: 45,
 };

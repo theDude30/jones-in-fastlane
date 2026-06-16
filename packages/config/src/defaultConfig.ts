@@ -6,6 +6,7 @@ import { locations } from "./locations.js";
 import { jobs } from "./jobs.js";
 import { degrees } from "./degrees.js";
 import { items } from "./items.js";
+import { stocks } from "./stocks.js";
 import { defaultEconomyConfig } from "./economyConfig.js";
 
 export const defaultConfig: GameConfig = {
@@ -16,5 +17,6 @@ export const defaultConfig: GameConfig = {
   jobs,
   degrees,
   items,
+  stocks,
   economy: defaultEconomyConfig,
 };

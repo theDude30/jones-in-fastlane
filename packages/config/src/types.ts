@@ -62,6 +62,12 @@ export interface GameConstants {
   graduateDependibilityBonus: number; // 5   §4
   graduateMaxCapBonus: number;        // 5   §4
   maxEnrollments: number;             // 4   §7
+  tBillBuyPrice: number;     // 100
+  tBillSellPrice: number;    // 97
+  lotteryBatchSize: number;  // 10 tickets per $10 batch
+  lotteryBatchPrice: number; // 10 (fixed, never economy-adjusted)
+  loanPaymentAmount: number; // 50 monthly payment
+  loanPaymentToDebt: number; // 45 of the $50 reduces balance; $5 is interest
 }
 
 export interface GameConfig {
@@ -73,6 +79,7 @@ export interface GameConfig {
   economy: EconomyConfig;
   degrees: DegreeDef[];
   items: ItemDef[];
+  stocks: StockDef[];
 }
 
 export interface EconomyConfig {
@@ -111,6 +118,14 @@ export type DurableType =
   | "refrigerator" | "freezer" | "stove" | "microwave"
   | "colorTV" | "vcr" | "stereo" | "bwTV" | "hotTub" | "computer"
   | "encyclopedia" | "dictionary" | "atlas";
+
+export type StockId = "gold" | "silver" | "porkBellies" | "blueChip" | "pennyStocks";
+
+export interface StockDef {
+  id: StockId;
+  name: string;
+  basePrice: number;
+}
 
 export interface ItemDef {
   id: ItemId;
