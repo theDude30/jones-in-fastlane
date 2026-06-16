@@ -290,6 +290,54 @@ function lotteryGame(): GameState {
   return state;
 }
 
+// ── Bug 1: brokerMenuOpen persists across turn boundaries ──────────────────
+describe("broker session ends at turn boundary", () => {
+  it("EndTurn clears brokerMenuOpen", () => {
+    const { state: s1 } = reduce(bankGame(), { type: "OpenBroker" }, testConfig);
+    expect(s1.players[0].brokerMenuOpen).toBe(true);
+    const { state: s2 } = reduce(s1, { type: "EndTurn" }, testConfig);
+    expect(s2.players[0].brokerMenuOpen).toBe(false);
+  });
+});
+
+// ── Bug 2: $0 loan silently approved ───────────────────────────────────────
+describe("ApplyLoan $0 guard", () => {
+  it("LoanDenied too-risky when computed loanSize rounds to 0", () => {
+    const state = bankGame();
+    state.players[0].wage = 5;
+    state.players[0].cash = 500;
+    state.players[0].bank = 0;
+    const { state: s, events } = reduce(state, { type: "ApplyLoan" }, testConfig);
+    expect(s.players[0].loanBalance).toBe(0);
+    expect(s.players[0].loanDueWeek).toBeNull();
+    expect(events[0]).toMatchObject({ type: "LoanDenied", reason: "too-risky" });
+  });
+});
+
+// ── Bug 3: OpenBroker double-charges hours if already open ──────────────────
+describe("OpenBroker idempotency", () => {
+  it("OpenBroker twice → second is InvalidAction, hours charged once", () => {
+    const { state: s1 } = reduce(bankGame(), { type: "OpenBroker" }, testConfig);
+    const { state: s2, events } = reduce(s1, { type: "OpenBroker" }, testConfig);
+    expect(s2.players[0].hoursRemaining).toBe(58); // only charged once (60 - 2)
+    expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "broker already open" });
+  });
+});
+
+// ── Bug 5: second loan silently overwrites loanDueWeek ─────────────────────
+describe("ApplyLoan preserves existing loanDueWeek", () => {
+  it("second loan preserves the existing loanDueWeek", () => {
+    const state = bankGame();
+    state.week = 3; // so state.week + 4 = 7, which differs from existing dueWeek=5
+    state.players[0].loanBalance = 200;
+    state.players[0].loanDueWeek = 5; // existing obligation, earlier than new would be
+    const { state: s, events } = reduce(state, { type: "ApplyLoan" }, testConfig);
+    expect(s.players[0].loanDueWeek).toBe(5); // must stay at 5, not overwritten with 7
+    expect(s.players[0].loanBalance).toBeGreaterThan(200); // new loan added
+    expect(events[0]).toMatchObject({ type: "LoanApproved", dueWeek: 5 });
+  });
+});
+
 describe("BuyLotteryTickets", () => {
   it("decreases cash by 10, adds 10 lotteryTickets", () => {
     const { state } = reduce(lotteryGame(), { type: "BuyLotteryTickets" }, testConfig);

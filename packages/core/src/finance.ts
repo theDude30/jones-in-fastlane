@@ -91,16 +91,25 @@ export function applyLoan(state: GameState, config: GameConfig, events: GameEven
   }
 
   const loanSize = 100 * Math.floor(liquidity - risk);
-  const dueWeek = state.week + 4;
+  if (loanSize === 0) {
+    p.happiness -= 1;
+    events.push({ type: "LoanDenied", playerId: p.id, reason: "too-risky", happinessCost: 1 });
+    return;
+  }
+  const effectiveDueWeek = p.loanDueWeek ?? state.week + 4;
   p.loanBalance += loanSize;
-  p.loanDueWeek = dueWeek;
+  p.loanDueWeek = effectiveDueWeek;
   p.happiness += 5;
-  events.push({ type: "LoanApproved", playerId: p.id, amount: loanSize, dueWeek, happinessGained: 5 });
+  events.push({ type: "LoanApproved", playerId: p.id, amount: loanSize, dueWeek: effectiveDueWeek, happinessGained: 5 });
 }
 
 export function openBroker(state: GameState, config: GameConfig, events: GameEvent[]): void {
   const p = playerAtBank(state, events);
   if (!p) return;
+  if (p.brokerMenuOpen) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "broker already open" });
+    return;
+  }
   if (p.hoursRemaining < config.actionCosts.broker) {
     events.push({ type: "NotEnoughTime", playerId: p.id, action: "OpenBroker" });
     return;

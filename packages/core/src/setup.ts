@@ -44,7 +44,7 @@ export function createInitialGame(
     durables: [],
     tickets: { baseball: 0, theatre: 0, concert: 0 },
     happyGroupsThisTurn: [],
-    stocks: { gold: 0, silver: 0, porkBellies: 0, blueChip: 0, pennyStocks: 0 },
+    stocks: Object.fromEntries(config.stocks.map((s) => [s.id, 0])) as Record<StockId, number>,
     tBills: 0,
     loanBalance: 0,
     loanDueWeek: null,

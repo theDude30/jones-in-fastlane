@@ -11,6 +11,7 @@ export function applyStartOfWeek(p: PlayerState, config: GameConfig): void {
   p.clothing.business = Math.max(0, p.clothing.business - 1);
   p.locationId = config.constants.homeLocationId;
   p.insideBuilding = false;
+  p.brokerMenuOpen = false;
   p.hoursRemaining = config.constants.hoursPerTurn;
 }
 
