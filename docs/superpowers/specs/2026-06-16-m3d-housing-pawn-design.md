@@ -154,13 +154,13 @@ pawnedItems: state.pawnedItems.map((it) => ({ ...it })),
 ### `packages/core/src/housing.ts`
 
 ```ts
-export function payRent(state: GameState, config: GameConfig, economy: Economy, events: GameEvent[]): void
+export function payRent(state: GameState, config: GameConfig, events: GameEvent[]): void
 export function requestRentExtension(state: GameState, config: GameConfig, events: GameEvent[]): void
 export function switchApartment(state: GameState, config: GameConfig, economy: Economy, events: GameEvent[]): void
 export function applyGarnishment(p: PlayerState, earned: number, config: GameConfig, events: GameEvent[]): number
 ```
 
-(`payRent` does not strictly need `economy` since `currentRent` is fixed, but it is included for signature symmetry with `switchApartment`. If unused, omit it to satisfy the linter — see implementation notes.)
+`payRent` takes no `economy` parameter — `currentRent` is fixed for the current apartment. Only `switchApartment` needs `economy` (to economy-adjust the new apartment's offered rent).
 
 A module-private helper mirrors `playerAtBank` from `finance.ts`:
 
