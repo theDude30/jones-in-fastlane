@@ -1,7 +1,5 @@
-import type { GameConfig, StockId } from "@jones/config";
+import type { GameConfig } from "@jones/config";
 import type { GameEvent, GameState, PlayerState } from "./types.js";
-
-const STOCK_IDS: StockId[] = ["gold", "silver", "porkBellies", "blueChip", "pennyStocks"];
 
 function playerAtBank(state: GameState, events: GameEvent[]): PlayerState | null {
   const p = state.players[state.currentPlayerIndex];
@@ -64,12 +62,14 @@ export function applyLoan(state: GameState, config: GameConfig, events: GameEven
     return;
   }
 
-  const stockValue = STOCK_IDS.reduce(
-    (sum, id) => sum + p.stocks[id] * state.stockPrices[id],
+  const stockValue = config.stocks.reduce(
+    (sum, s) => sum + p.stocks[s.id] * state.stockPrices[s.id],
     0,
   );
   const liquidAssets = p.cash + p.bank + stockValue + p.tBills * config.constants.tBillBuyPrice;
   const liquidity = p.wage + liquidAssets / 1000;
+  // Risk: base 5; for prior/current borrowers add timesDefaulted, +1 per $100 of
+  // outstanding debt, and +1 if any debt remains.
   const risk =
     p.timesDefaulted === 0 && p.loanBalance === 0
       ? 5
