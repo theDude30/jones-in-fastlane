@@ -7,6 +7,7 @@ import { makeEconomy } from "./economy.js";
 import { applyForJob, requestRaise, quitJob } from "./hire.js";
 import { enroll, study } from "./education.js";
 import { buyItem } from "./shopping.js";
+import { deposit, withdraw } from "./finance.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
@@ -143,6 +144,12 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
       buyItem(command.itemId, next, config, economy, events);
       break;
     }
+    case "Deposit":
+      deposit(command.amount, next, events);
+      break;
+    case "Withdraw":
+      withdraw(command.amount, next, events);
+      break;
     default:
       events.push({ type: "InvalidAction", playerId: p.id, reason: `unhandled command ${(command as Command).type}` });
   }

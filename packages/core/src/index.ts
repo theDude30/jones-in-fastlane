@@ -10,3 +10,4 @@ export * from "./economy.js";
 export * from "./hire.js";
 export * from "./education.js";
 export * from "./shopping.js";
+export * from "./finance.js";
