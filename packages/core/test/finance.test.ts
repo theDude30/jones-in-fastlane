@@ -73,4 +73,11 @@ describe("Withdraw", () => {
     const { events } = reduce(bankGame(), { type: "Withdraw", amount: 50 }, testConfig);
     expect(events[0]).toMatchObject({ type: "InvalidAction" });
   });
+
+  it("InvalidAction when not at bank", () => {
+    const state = bankGame();
+    state.players[0].locationId = "zMart";
+    const { events } = reduce(state, { type: "Withdraw", amount: 100 }, testConfig);
+    expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "wrong location" });
+  });
 });

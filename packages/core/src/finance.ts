@@ -1,11 +1,17 @@
-import type { GameEvent, GameState } from "./types.js";
+import type { GameEvent, GameState, PlayerState } from "./types.js";
 
-export function deposit(amount: number, state: GameState, events: GameEvent[]): void {
+function playerAtBank(state: GameState, events: GameEvent[]): PlayerState | null {
   const p = state.players[state.currentPlayerIndex];
   if (!p.insideBuilding || p.locationId !== "bank") {
     events.push({ type: "InvalidAction", playerId: p.id, reason: "wrong location" });
-    return;
+    return null;
   }
+  return p;
+}
+
+export function deposit(amount: number, state: GameState, events: GameEvent[]): void {
+  const p = playerAtBank(state, events);
+  if (!p) return;
   if (amount <= 0 || amount % 100 !== 0) {
     events.push({ type: "InvalidAction", playerId: p.id, reason: "amount must be a positive multiple of 100" });
     return;
@@ -20,11 +26,8 @@ export function deposit(amount: number, state: GameState, events: GameEvent[]): 
 }
 
 export function withdraw(amount: number, state: GameState, events: GameEvent[]): void {
-  const p = state.players[state.currentPlayerIndex];
-  if (!p.insideBuilding || p.locationId !== "bank") {
-    events.push({ type: "InvalidAction", playerId: p.id, reason: "wrong location" });
-    return;
-  }
+  const p = playerAtBank(state, events);
+  if (!p) return;
   if (amount <= 0 || amount % 100 !== 0) {
     events.push({ type: "InvalidAction", playerId: p.id, reason: "amount must be a positive multiple of 100" });
     return;
