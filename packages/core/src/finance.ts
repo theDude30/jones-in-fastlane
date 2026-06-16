@@ -1,4 +1,7 @@
+import type { GameConfig, StockId } from "@jones/config";
 import type { GameEvent, GameState, PlayerState } from "./types.js";
+
+const STOCK_IDS: StockId[] = ["gold", "silver", "porkBellies", "blueChip", "pennyStocks"];
 
 function playerAtBank(state: GameState, events: GameEvent[]): PlayerState | null {
   const p = state.players[state.currentPlayerIndex];
@@ -39,4 +42,49 @@ export function withdraw(amount: number, state: GameState, events: GameEvent[]):
   p.bank -= amount;
   p.cash += amount;
   events.push({ type: "Withdrawn", playerId: p.id, amount });
+}
+
+export function applyLoan(state: GameState, config: GameConfig, events: GameEvent[]): void {
+  const p = playerAtBank(state, events);
+  if (!p) return;
+  if (p.hoursRemaining < config.actionCosts.applyLoan) {
+    events.push({ type: "NotEnoughTime", playerId: p.id, action: "ApplyLoan" });
+    return;
+  }
+  p.hoursRemaining -= config.actionCosts.applyLoan;
+
+  if (p.loanInDefault) {
+    p.happiness -= 1;
+    events.push({ type: "LoanDenied", playerId: p.id, reason: "in-default", happinessCost: 1 });
+    return;
+  }
+  if (p.wage === 0) {
+    p.happiness -= 1;
+    events.push({ type: "LoanDenied", playerId: p.id, reason: "unemployed", happinessCost: 1 });
+    return;
+  }
+
+  const stockValue = STOCK_IDS.reduce(
+    (sum, id) => sum + p.stocks[id] * state.stockPrices[id],
+    0,
+  );
+  const liquidAssets = p.cash + p.bank + stockValue + p.tBills * config.constants.tBillBuyPrice;
+  const liquidity = p.wage + liquidAssets / 1000;
+  const risk =
+    p.timesDefaulted === 0 && p.loanBalance === 0
+      ? 5
+      : 5 + p.timesDefaulted + Math.floor(p.loanBalance / 100) + (p.loanBalance > 0 ? 1 : 0);
+
+  if (liquidity <= risk) {
+    p.happiness -= 1;
+    events.push({ type: "LoanDenied", playerId: p.id, reason: "too-risky", happinessCost: 1 });
+    return;
+  }
+
+  const loanSize = 100 * Math.floor(liquidity - risk);
+  const dueWeek = state.week + 4;
+  p.loanBalance += loanSize;
+  p.loanDueWeek = dueWeek;
+  p.happiness += 5;
+  events.push({ type: "LoanApproved", playerId: p.id, amount: loanSize, dueWeek, happinessGained: 5 });
 }

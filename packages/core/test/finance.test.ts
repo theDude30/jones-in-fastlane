@@ -81,3 +81,62 @@ describe("Withdraw", () => {
     expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "wrong location" });
   });
 });
+
+describe("ApplyLoan", () => {
+  it("LoanDenied reason=unemployed when wage=0, -1 happiness, 2h deducted", () => {
+    const state = bankGame();
+    state.players[0].wage = 0;
+    const { state: s, events } = reduce(state, { type: "ApplyLoan" }, testConfig);
+    expect(s.players[0].hoursRemaining).toBe(58);
+    expect(s.players[0].happiness).toBe(-1);
+    expect(events[0]).toMatchObject({ type: "LoanDenied", reason: "unemployed", happinessCost: 1 });
+  });
+
+  it("LoanApproved: correct loanSize, dueWeek=week+4, +5 happiness, 2h deducted", () => {
+    // bankGame: wage=10, cash=5000, bank=500, no stocks/tBills
+    // liquidAssets = 5000 + 500 = 5500
+    // liquidity = 10 + 5500/1000 = 15.5
+    // risk = 5 (fresh borrower: timesDefaulted=0, loanBalance=0)
+    // loanSize = 100 * floor(15.5 - 5) = 1000
+    const { state: s, events } = reduce(bankGame(), { type: "ApplyLoan" }, testConfig);
+    expect(s.players[0].hoursRemaining).toBe(58);
+    expect(s.players[0].loanBalance).toBe(1000);
+    expect(s.players[0].loanDueWeek).toBe(5); // week 1 + 4
+    expect(s.players[0].happiness).toBe(5);
+    expect(events[0]).toMatchObject({ type: "LoanApproved", amount: 1000, dueWeek: 5, happinessGained: 5 });
+  });
+
+  it("LoanDenied reason=in-default when loanInDefault=true", () => {
+    const state = bankGame();
+    state.players[0].loanInDefault = true;
+    const { state: s, events } = reduce(state, { type: "ApplyLoan" }, testConfig);
+    expect(s.players[0].hoursRemaining).toBe(58);
+    expect(events[0]).toMatchObject({ type: "LoanDenied", reason: "in-default" });
+  });
+
+  it("risk formula: timesDefaulted=2, loanBalance=200 → risk=10, loanSize=500", () => {
+    // risk = 5 + 2 + floor(200/100) + 1 = 10
+    // liquidity = 10 + 5500/1000 = 15.5
+    // loanSize = 100 * floor(15.5 - 10) = 500
+    // new loanBalance = 200 + 500 = 700
+    const state = bankGame();
+    state.players[0].timesDefaulted = 2;
+    state.players[0].loanBalance = 200;
+    const { state: s } = reduce(state, { type: "ApplyLoan" }, testConfig);
+    expect(s.players[0].loanBalance).toBe(700);
+  });
+
+  it("hours are deducted even when loan is denied", () => {
+    const state = bankGame();
+    state.players[0].wage = 0;
+    const { state: s } = reduce(state, { type: "ApplyLoan" }, testConfig);
+    expect(s.players[0].hoursRemaining).toBe(58);
+  });
+
+  it("NotEnoughTime when hoursRemaining < applyLoan cost", () => {
+    const state = bankGame();
+    state.players[0].hoursRemaining = 1;
+    const { events } = reduce(state, { type: "ApplyLoan" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "NotEnoughTime", action: "ApplyLoan" });
+  });
+});
