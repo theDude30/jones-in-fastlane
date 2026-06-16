@@ -56,6 +56,12 @@ export interface GameConstants {
   hoursPerRingStep: number;    // travel cost per ring step (§2: ~10/lap)
   workWageMultiplier: number;  // 8 §6
   dependibilityDecayPerWeek: number; // 3 §4
+  enrollmentBaseFee: number;          // 50  §7
+  lessonsPerDegree: number;           // 10  §7
+  minLessonsPerDegree: number;        // 8   §7
+  graduateDependibilityBonus: number; // 5   §4
+  graduateMaxCapBonus: number;        // 5   §4
+  maxEnrollments: number;             // 4   §7
 }
 
 export interface GameConfig {
@@ -65,6 +71,7 @@ export interface GameConfig {
   locations: LocationDef[];
   jobs: JobDef[];
   economy: EconomyConfig;
+  degrees: DegreeDef[];
 }
 
 export interface EconomyConfig {
@@ -75,4 +82,10 @@ export interface EconomyConfig {
   crashReadingThreshold: number;
   crashProbabilityBase: number;
   boomProbabilityBase: number;
+}
+
+export interface DegreeDef {
+  id: DegreeId;
+  name: string;
+  prereqs: DegreeId[];
 }

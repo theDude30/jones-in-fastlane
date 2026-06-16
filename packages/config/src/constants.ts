@@ -15,4 +15,10 @@ export const constants: GameConstants = {
   hoursPerRingStep: 10 / 13,
   workWageMultiplier: 8,
   dependibilityDecayPerWeek: 3,
+  enrollmentBaseFee: 50,
+  lessonsPerDegree: 10,
+  minLessonsPerDegree: 8,
+  graduateDependibilityBonus: 5,
+  graduateMaxCapBonus: 5,
+  maxEnrollments: 4,
 };
