@@ -107,7 +107,8 @@ export type Command =
   | { type: "SwitchApartment" }
   | { type: "PawnItem"; itemId: ItemId }
   | { type: "RedeemItem"; itemId: ItemId }
-  | { type: "BuyPawnedItem"; itemId: ItemId };
+  | { type: "BuyPawnedItem"; itemId: ItemId }
+  | { type: "PayLoan" };
 
 export type GameEvent =
   | { type: "Traveled"; playerId: string; toLocationId: string; hoursSpent: number }
@@ -150,7 +151,8 @@ export type GameEvent =
   | { type: "ItemPawned"; playerId: string; itemId: ItemId; payout: number; happinessCost: number }
   | { type: "ItemRedeemed"; playerId: string; itemId: ItemId; cost: number }
   | { type: "PawnedItemBought"; playerId: string; itemId: ItemId; cost: number }
-  | { type: "Garnished"; playerId: string; toDebt: number; interest: number };
+  | { type: "Garnished"; playerId: string; toDebt: number; interest: number }
+  | { type: "LoanPaid"; playerId: string; payment: number; toDebt: number; interest: number; remainingBalance: number; dueWeek: number | null };
 
 export interface ReduceResult {
   state: GameState;

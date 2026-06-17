@@ -371,3 +371,71 @@ describe("BuyLotteryTickets", () => {
     expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "wrong location" });
   });
 });
+
+describe("PayLoan", () => {
+  it("normal payment: $50 cash, $45 to debt, $5 interest, dueWeek +4, clears default", () => {
+    const state = bankGame();
+    state.week = 5;
+    state.players[0].loanBalance = 1000;
+    state.players[0].loanDueWeek = 5;
+    state.players[0].loanInDefault = true;
+    const { state: s, events } = reduce(state, { type: "PayLoan" }, testConfig);
+    const p = s.players[0];
+    expect(p.cash).toBe(5000 - 50);
+    expect(p.loanBalance).toBe(955); // 1000 - 45
+    expect(p.loanDueWeek).toBe(9);   // 5 + 4
+    expect(p.loanInDefault).toBe(false);
+    expect(events[0]).toMatchObject({
+      type: "LoanPaid",
+      payment: 50,
+      toDebt: 45,
+      interest: 5,
+      remainingBalance: 955,
+      dueWeek: 9,
+    });
+  });
+
+  it("balance below the payment amount is cleared with no interest, dueWeek null", () => {
+    const state = bankGame();
+    state.players[0].loanBalance = 30;
+    state.players[0].loanDueWeek = 5;
+    const { state: s, events } = reduce(state, { type: "PayLoan" }, testConfig);
+    const p = s.players[0];
+    expect(p.cash).toBe(5000 - 30); // pays only the outstanding balance
+    expect(p.loanBalance).toBe(0);
+    expect(p.loanDueWeek).toBeNull();
+    expect(p.loanInDefault).toBe(false);
+    expect(events[0]).toMatchObject({
+      type: "LoanPaid",
+      payment: 30,
+      toDebt: 30,
+      interest: 0,
+      remainingBalance: 0,
+      dueWeek: null,
+    });
+  });
+
+  it("InvalidAction when there is no loan to pay", () => {
+    const state = bankGame();
+    state.players[0].loanBalance = 0;
+    const { events } = reduce(state, { type: "PayLoan" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "no loan to pay" });
+  });
+
+  it("NotEnoughMoney when cash is below the payment due", () => {
+    const state = bankGame();
+    state.players[0].loanBalance = 1000;
+    state.players[0].loanDueWeek = 5;
+    state.players[0].cash = 20; // < 50
+    const { events } = reduce(state, { type: "PayLoan" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "NotEnoughMoney", action: "PayLoan" });
+  });
+
+  it("InvalidAction when not at the bank", () => {
+    const state = bankGame();
+    state.players[0].loanBalance = 1000;
+    state.players[0].locationId = "pawnShop";
+    const { events } = reduce(state, { type: "PayLoan" }, testConfig);
+    expect(events[0]).toMatchObject({ type: "InvalidAction", reason: "wrong location" });
+  });
+});

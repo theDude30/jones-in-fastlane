@@ -199,3 +199,55 @@ export function buyLotteryTickets(state: GameState, config: GameConfig, events: 
     totalCost: cost,
   });
 }
+
+export function payLoan(state: GameState, config: GameConfig, events: GameEvent[]): void {
+  const p = playerAtBank(state, events);
+  if (!p) return;
+  if (p.loanBalance <= 0) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "no loan to pay" });
+    return;
+  }
+
+  if (p.loanBalance < config.constants.loanPaymentAmount) {
+    const payment = p.loanBalance;
+    if (p.cash < payment) {
+      events.push({ type: "NotEnoughMoney", playerId: p.id, action: "PayLoan" });
+      return;
+    }
+    p.cash -= payment;
+    p.loanBalance = 0;
+    p.loanDueWeek = null;
+    p.loanInDefault = false;
+    events.push({
+      type: "LoanPaid",
+      playerId: p.id,
+      payment,
+      toDebt: payment,
+      interest: 0,
+      remainingBalance: 0,
+      dueWeek: null,
+    });
+    return;
+  }
+
+  const payment = config.constants.loanPaymentAmount;
+  if (p.cash < payment) {
+    events.push({ type: "NotEnoughMoney", playerId: p.id, action: "PayLoan" });
+    return;
+  }
+  const toDebt = config.constants.loanPaymentToDebt;
+  const interest = payment - toDebt;
+  p.cash -= payment;
+  p.loanBalance -= toDebt;
+  p.loanDueWeek = (p.loanDueWeek ?? state.week) + config.constants.weeksPerMonth;
+  p.loanInDefault = false;
+  events.push({
+    type: "LoanPaid",
+    playerId: p.id,
+    payment,
+    toDebt,
+    interest,
+    remainingBalance: p.loanBalance,
+    dueWeek: p.loanDueWeek,
+  });
+}

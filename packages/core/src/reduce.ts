@@ -7,7 +7,7 @@ import { makeEconomy } from "./economy.js";
 import { applyForJob, requestRaise, quitJob } from "./hire.js";
 import { enroll, study } from "./education.js";
 import { buyItem } from "./shopping.js";
-import { deposit, withdraw, applyLoan, openBroker, buyStock, sellStock, buyTBill, sellTBill, buyLotteryTickets } from "./finance.js";
+import { deposit, withdraw, applyLoan, payLoan, openBroker, buyStock, sellStock, buyTBill, sellTBill, buyLotteryTickets } from "./finance.js";
 import { payRent, requestRentExtension, switchApartment, applyGarnishment } from "./housing.js";
 import { pawnItem, redeemItem, buyPawnedItem } from "./pawn.js";
 
@@ -156,6 +156,9 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
       break;
     case "ApplyLoan":
       applyLoan(next, config, events);
+      break;
+    case "PayLoan":
+      payLoan(next, config, events);
       break;
     case "OpenBroker":
       openBroker(next, config, events);
