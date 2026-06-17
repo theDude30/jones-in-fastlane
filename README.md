@@ -71,12 +71,13 @@ play are designed-for and built afterward.
 | **M3a — Education** | Complete | Degree enrollment and study mechanics: 11 degrees with prereq chains, enrollment fee, graduation bonuses. |
 | **M3b — Items & Shopping** | Complete | All purchasable items: fast food, clothes, durables, books, tickets, newspaper. BuyItem command with 40 item types. |
 | **M3c — Financial** | Complete | Banking (deposit/withdraw), loans, stock & T-bill trading via broker, lottery tickets. 9 commands, 10 events. |
+| **M3d — Housing & Pawn** | Complete | Rent payment, extension requests, apartment switching, wage garnishment, and a shared pawn shop (pawn/redeem/buy). 6 commands, 8 events. |
 | **M3 — AI players** | Planned | Port the plan-based AI agents; they play full games headlessly. Difficulty via config. |
 | **M4 — Rendering + UI + audio** | Planned | PixiJS board + responsive React UI + drop-in audio, wired to the core. **End of M4 = MVP:** full local game, solo-vs-AI and hotseat, responsive, placeholder 4K-ready art. |
 | **M5 — Mobile packaging** | Future | Capacitor iOS/Android builds for the App Store / Play Store. |
 | **M6 — Online play** | Future | Server-authoritative networked multiplayer + AI-agent-as-player, added on the existing command-driven core. |
 
-M1, M2, M3a, M3b, and M3c are complete. Plans are in
+M1, M2, M3a, M3b, M3c, and M3d are complete. Plans are in
 [`docs/superpowers/plans/`](docs/superpowers/plans/).
 
 ## Documentation
@@ -92,6 +93,4 @@ Howler.js (audio) · Capacitor (mobile) · Vite.
 
 ## Status
 
-M1, M2, M3a, M3b, and M3c are complete — 40 item types with per-turn happiness groups and
-extraCredit tracking, plus the full financial subsystem (banking, loans, stocks/T-bills,
-lottery). 159 tests passing.
+M1, M2, M3a, M3b, M3c, and M3d are complete — 40 item types, full financial subsystem, rent/housing mechanics, wage garnishment, and a shared pawn shop. 187 tests passing.
