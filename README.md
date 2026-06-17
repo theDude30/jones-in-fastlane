@@ -74,11 +74,12 @@ play are designed-for and built afterward.
 | **M3d — Housing & Pawn** | Complete | Rent payment, extension requests, apartment switching, wage garnishment, and a shared pawn shop (pawn/redeem/buy). 6 commands, 8 events. |
 | **M3e — Rent & Loan Due** | Complete | Loan repayment (PayLoan) and automatic start-of-turn due-date processing: unpaid rent becomes Rent Debt (driving wage garnishment), unpaid loans default. 1 command, 3 events. |
 | **M3 — AI players** | Complete | `@jones/ai` package: `RandomPlanner` + `GreedyPlanner` agents play full games headlessly through the existing `reduce` interface. Difficulty presets (easy/medium/hard) via config. |
-| **M4 — Rendering + UI + audio** | Planned | PixiJS board + responsive React UI + drop-in audio, wired to the core. **End of M4 = MVP:** full local game, solo-vs-AI and hotseat, responsive, placeholder 4K-ready art. |
+| **M4a — State bridge & app shell** | Complete | `@jones/game` package: Zustand store bridges the UI to `@jones/core`'s `reduce`; a minimal debug screen proves the full human command-dispatch loop end-to-end. No board art, AI, or styling yet. |
+| **M4 — Rendering + UI + audio** | In Progress | PixiJS board + responsive React UI + drop-in audio, wired to the core. **End of M4 = MVP:** full local game, solo-vs-AI and hotseat, responsive, placeholder 4K-ready art. |
 | **M5 — Mobile packaging** | Future | Capacitor iOS/Android builds for the App Store / Play Store. |
 | **M6 — Online play** | Future | Server-authoritative networked multiplayer + AI-agent-as-player, added on the existing command-driven core. |
 
-M1, M2, M3a, M3b, M3c, M3d, M3e, and M3 (AI players) are complete. Plans are in
+M1, M2, M3a, M3b, M3c, M3d, M3e, M3 (AI players), and M4a are complete. Plans are in
 [`docs/superpowers/plans/`](docs/superpowers/plans/).
 
 ## Documentation
@@ -94,4 +95,4 @@ Howler.js (audio) · Capacitor (mobile) · Vite.
 
 ## Status
 
-M1, M2, M3a, M3b, M3c, M3d, M3e, and M3 (AI players) are complete — 40 item types, full financial subsystem, rent/housing mechanics, wage garnishment, a shared pawn shop, loan repayment, automatic rent/loan due-date processing, and headless AI opponents (random + greedy planners). 236 tests passing.
+M1, M2, M3a, M3b, M3c, M3d, M3e, M3 (AI players), and M4a are complete — 40 item types, full financial subsystem, rent/housing mechanics, wage garnishment, a shared pawn shop, loan repayment, automatic rent/loan due-date processing, headless AI opponents (random + greedy planners), and a working `@jones/game` state bridge with a debug command-dispatch loop. 248 tests passing.
