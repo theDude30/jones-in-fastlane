@@ -152,7 +152,9 @@ export type GameEvent =
   | { type: "ItemRedeemed"; playerId: string; itemId: ItemId; cost: number }
   | { type: "PawnedItemBought"; playerId: string; itemId: ItemId; cost: number }
   | { type: "Garnished"; playerId: string; toDebt: number; interest: number }
-  | { type: "LoanPaid"; playerId: string; payment: number; toDebt: number; interest: number; remainingBalance: number; dueWeek: number | null };
+  | { type: "LoanPaid"; playerId: string; payment: number; toDebt: number; interest: number; remainingBalance: number; dueWeek: number | null }
+  | { type: "RentDebtIncurred"; playerId: string; amount: number; totalDebt: number; rentDueWeek: number }
+  | { type: "LoanDefaulted"; playerId: string; timesDefaulted: number; dueWeek: number; happinessCost: number };
 
 export interface ReduceResult {
   state: GameState;

@@ -16,6 +16,42 @@ export function applyStartOfWeek(p: PlayerState, config: GameConfig): void {
   p.rentExtensionUsedThisTurn = false;
 }
 
+export function applyDueDates(
+  p: PlayerState,
+  state: GameState,
+  config: GameConfig,
+  events: GameEvent[],
+): void {
+  // Rent: if the due week has passed without payment, accrue one month's rent as debt.
+  if (state.week > p.rentDueWeek) {
+    p.rentDebt += p.currentRent;
+    p.everInRentDebt = true;
+    p.rentDueWeek += config.constants.weeksPerMonth;
+    events.push({
+      type: "RentDebtIncurred",
+      playerId: p.id,
+      amount: p.currentRent,
+      totalDebt: p.rentDebt,
+      rentDueWeek: p.rentDueWeek,
+    });
+  }
+
+  // Loan: if an outstanding loan's due week has passed without a payment, default.
+  if (p.loanBalance > 0 && p.loanDueWeek !== null && state.week > p.loanDueWeek) {
+    p.timesDefaulted += 1;
+    p.loanInDefault = true;
+    p.happiness -= 1;
+    p.loanDueWeek += config.constants.weeksPerMonth;
+    events.push({
+      type: "LoanDefaulted",
+      playerId: p.id,
+      timesDefaulted: p.timesDefaulted,
+      dueWeek: p.loanDueWeek,
+      happinessCost: 1,
+    });
+  }
+}
+
 export function advanceTurn(
   state: GameState,
   config: GameConfig,
@@ -66,5 +102,7 @@ export function advanceTurn(
     if (!state.winners.includes(upNext.id)) state.winners.push(upNext.id);
     state.status = "ended";
     events.push({ type: "PlayerWon", playerId: upNext.id });
+  } else {
+    applyDueDates(upNext, state, config, events);
   }
 }
