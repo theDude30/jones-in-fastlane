@@ -1,4 +1,4 @@
-import type { DegreeId, ItemId, StockId, UniformLevel } from "@jones/config";
+import type { DegreeId, DurableType, ItemId, StockId, UniformLevel } from "@jones/config";
 import type { RngState } from "./rng.js";
 
 export interface GoalTargets {
@@ -50,9 +50,24 @@ export interface PlayerState {
   loanInDefault: boolean;
   brokerMenuOpen: boolean;
   lotteryTickets: number;
+  apartmentId: string;
+  currentRent: number;
+  rentDueWeek: number;
+  rentDebt: number;
+  rentExtensionsApproved: number;
+  everInRentDebt: boolean;
+  rentExtensionUsedThisTurn: boolean;
 }
 
 export type GameStatus = "playing" | "ended";
+
+export interface PawnedItem {
+  itemId: ItemId;
+  durableType: DurableType;
+  pricePaid: number;
+  pawnedByPlayerId: string;
+  pawnedWeek: number;
+}
 
 export interface GameState {
   week: number;
@@ -63,6 +78,7 @@ export interface GameState {
   status: GameStatus;
   winners: string[];
   stockPrices: Record<StockId, number>;
+  pawnedItems: PawnedItem[];
 }
 
 export type Command =
@@ -85,7 +101,13 @@ export type Command =
   | { type: "SellStock"; stockId: StockId }
   | { type: "BuyTBill" }
   | { type: "SellTBill" }
-  | { type: "BuyLotteryTickets" };
+  | { type: "BuyLotteryTickets" }
+  | { type: "PayRent" }
+  | { type: "RequestRentExtension" }
+  | { type: "SwitchApartment" }
+  | { type: "PawnItem"; itemId: ItemId }
+  | { type: "RedeemItem"; itemId: ItemId }
+  | { type: "BuyPawnedItem"; itemId: ItemId };
 
 export type GameEvent =
   | { type: "Traveled"; playerId: string; toLocationId: string; hoursSpent: number }
@@ -120,7 +142,15 @@ export type GameEvent =
   | { type: "StockSold"; playerId: string; stockId: StockId; price: number }
   | { type: "TBillBought"; playerId: string; price: number }
   | { type: "TBillSold"; playerId: string; proceeds: number }
-  | { type: "LotteryTicketsBought"; playerId: string; ticketCount: number; totalCost: number };
+  | { type: "LotteryTicketsBought"; playerId: string; ticketCount: number; totalCost: number }
+  | { type: "RentPaid"; playerId: string; amount: number; rentDueWeek: number }
+  | { type: "RentExtensionApproved"; playerId: string; extensionsApproved: number; rentDueWeek: number }
+  | { type: "RentExtensionDenied"; playerId: string; reason: "in-debt" | "luck"; happinessCost: number }
+  | { type: "ApartmentSwitched"; playerId: string; apartmentId: string; newRent: number; rentDueWeek: number }
+  | { type: "ItemPawned"; playerId: string; itemId: ItemId; payout: number; happinessCost: number }
+  | { type: "ItemRedeemed"; playerId: string; itemId: ItemId; cost: number }
+  | { type: "PawnedItemBought"; playerId: string; itemId: ItemId; cost: number }
+  | { type: "Garnished"; playerId: string; toDebt: number; interest: number };
 
 export interface ReduceResult {
   state: GameState;
