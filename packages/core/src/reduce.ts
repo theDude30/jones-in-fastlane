@@ -8,7 +8,7 @@ import { applyForJob, requestRaise, quitJob } from "./hire.js";
 import { enroll, study } from "./education.js";
 import { buyItem } from "./shopping.js";
 import { deposit, withdraw, applyLoan, openBroker, buyStock, sellStock, buyTBill, sellTBill, buyLotteryTickets } from "./finance.js";
-import { payRent, requestRentExtension, switchApartment } from "./housing.js";
+import { payRent, requestRentExtension, switchApartment, applyGarnishment } from "./housing.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
@@ -111,7 +111,7 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
       const fullHours = config.actionCosts.work;
       const hours = Math.min(fullHours, p.hoursRemaining);
       const earned = Math.floor((config.constants.workWageMultiplier * p.wage * hours) / fullHours);
-      p.cash += earned;
+      p.cash += p.rentDebt > 0 ? applyGarnishment(p, earned, config, events) : earned;
       p.hoursRemaining -= hours;
       if (p.experience < p.maxExperience) p.experience += 1;
       if (p.dependibility < p.maxDependibility) p.dependibility += 1;

@@ -73,3 +73,22 @@ export function switchApartment(state: GameState, config: GameConfig, economy: E
   p.rentDueWeek = state.week + config.constants.weeksPerMonth;
   events.push({ type: "ApartmentSwitched", playerId: p.id, apartmentId: p.apartmentId, newRent, rentDueWeek: p.rentDueWeek });
 }
+
+export function applyGarnishment(
+  p: PlayerState,
+  earned: number,
+  config: GameConfig,
+  events: GameEvent[],
+): number {
+  const half = Math.floor(earned / 2);
+  if (p.rentDebt >= half) {
+    p.rentDebt -= half;
+    const keep = Math.max(0, earned - half - config.constants.garnishmentInterest);
+    events.push({ type: "Garnished", playerId: p.id, toDebt: half, interest: config.constants.garnishmentInterest });
+    return keep;
+  }
+  const taken = p.rentDebt;
+  p.rentDebt = 0;
+  events.push({ type: "Garnished", playerId: p.id, toDebt: taken, interest: 0 });
+  return earned - taken;
+}
