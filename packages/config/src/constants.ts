@@ -34,4 +34,10 @@ export const constants: GameConstants = {
   pawnExpiryWeeks: 3,
   garnishmentInterest: 2,
   rentExtensionChances: [1.0, 0.75, 0.5, 0.25],
+  relaxAmount: 3,
+  maxRelaxation: 50,
+  freshFoodFridgeCapacity: 6,
+  freshFoodFreezerBonus: 6,
+  starvationHoursLost: 20,
+  doctorHoursLost: 10,
 };
