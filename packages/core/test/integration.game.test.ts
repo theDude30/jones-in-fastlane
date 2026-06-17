@@ -243,3 +243,55 @@ describe("financial flow", () => {
     expect(allEvents.some((e) => e.type === "LotteryTicketsBought")).toBe(true);
   });
 });
+
+describe("housing & pawn flow", () => {
+  it("buys a durable, pawns and redeems it, then pays rent and switches apartment", () => {
+    const config = { ...defaultConfig, economy: constantEconomyConfig };
+    let state = createInitialGame(config, 0, [
+      { name: "A", isAI: false, goals: { wealth: 50, happiness: 50, education: 50, career: 50 } },
+    ]);
+    state.players[0].cash = 5000;
+    const allEvents: GameEvent[] = [];
+
+    function step(cmd: Parameters<typeof reduce>[1]) {
+      const r = reduce(state, cmd, config);
+      state = r.state;
+      allEvents.push(...r.events);
+    }
+
+    // Buy a refrigerator at Socket City ($876)
+    step({ type: "TravelTo", locationId: "socketCity" });
+    step({ type: "EnterBuilding" });
+    step({ type: "BuyItem", itemId: "refrigeratorSocket" });
+    const afterBuyCash = state.players[0].cash;
+
+    // Travel to the Pawn Shop, pawn it (payout 350), then redeem it same week (cost 438)
+    step({ type: "ExitBuilding" });
+    step({ type: "TravelTo", locationId: "pawnShop" });
+    step({ type: "EnterBuilding" });
+    step({ type: "PawnItem", itemId: "refrigeratorSocket" });
+    expect(state.pawnedItems).toHaveLength(1);
+    expect(state.players[0].cash).toBe(afterBuyCash + 350);
+
+    step({ type: "RedeemItem", itemId: "refrigeratorSocket" });
+    expect(state.pawnedItems).toHaveLength(0);
+    expect(state.players[0].durables.find((d) => d.itemId === "refrigeratorSocket")).toBeDefined();
+
+    // Travel to the Rent Office, pay rent then switch apartment
+    step({ type: "ExitBuilding" });
+    step({ type: "TravelTo", locationId: "rentOffice" });
+    step({ type: "EnterBuilding" });
+    step({ type: "PayRent" });
+    const dueAfterPay = state.players[0].rentDueWeek;
+    step({ type: "SwitchApartment" });
+
+    const p = state.players[0];
+    expect(dueAfterPay).toBe(8);                 // started 4, +4 from PayRent
+    expect(p.apartmentId).toBe("securityApartments");
+    expect(p.currentRent).toBe(475);
+    expect(allEvents.some((e) => e.type === "ItemPawned")).toBe(true);
+    expect(allEvents.some((e) => e.type === "ItemRedeemed")).toBe(true);
+    expect(allEvents.some((e) => e.type === "RentPaid")).toBe(true);
+    expect(allEvents.some((e) => e.type === "ApartmentSwitched")).toBe(true);
+  });
+});
