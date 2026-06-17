@@ -8,4 +8,5 @@ export { degrees } from "./degrees.js";
 export { items } from "./items.js";
 export { stocks } from "./stocks.js";
 export { defaultConfig } from "./defaultConfig.js";
+export { aiDifficulty } from "./ai.js";
 export { defaultEconomyConfig, constantEconomyConfig } from "./economyConfig.js";

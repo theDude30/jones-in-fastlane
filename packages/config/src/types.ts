@@ -152,3 +152,16 @@ export interface ItemDef {
   freshFoodWeeks?: number;
   ticketType?: "baseball" | "theatre" | "concert";
 }
+
+export interface GoalWeights {
+  wealth: number;
+  happiness: number;
+  education: number;
+  career: number;
+}
+
+export interface AIDifficultyPreset {
+  planner: "greedy" | "random";
+  weights: GoalWeights;
+  epsilon: number; // 0..1 mistake rate (greedy only; ignored by random)
+}
