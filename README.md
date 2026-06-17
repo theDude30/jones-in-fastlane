@@ -93,6 +93,33 @@ M1, M2, M3a, M3b, M3c, M3d, M3e, M3 (AI players), and M4a are complete. Plans ar
 TypeScript (strict) · pnpm workspaces · Vitest · PixiJS v8 · React · Zustand ·
 Howler.js (audio) · Capacitor (mobile) · Vite.
 
+## Running locally
+
+**Prerequisites:** Node.js 20+ and [pnpm](https://pnpm.io) 9+.
+
+```bash
+pnpm install        # install all workspace packages
+pnpm test           # run the full test suite (logic packages + @jones/game)
+pnpm typecheck      # type-check every package
+```
+
+**The app (`@jones/game`):** a Vite + React dev server. As of M4a it only renders a
+debug screen (raw game state, a fixed button per command) proving the engine is
+wired up — board art, styling, and audio land in later M4 sub-milestones.
+
+```bash
+pnpm --filter @jones/game dev    # starts the dev server (prints the local URL)
+pnpm --filter @jones/game build  # production build, output to packages/game/dist
+```
+
+**Running a single package's tests** (useful while iterating):
+
+```bash
+pnpm test -- --project=logic                       # @jones/config, @jones/core, @jones/ai
+pnpm test -- --project=game                         # @jones/game (jsdom)
+pnpm test -- packages/core/test/finance.test.ts     # one file, any package
+```
+
 ## Status
 
 M1, M2, M3a, M3b, M3c, M3d, M3e, M3 (AI players), and M4a are complete — 40 item types, full financial subsystem, rent/housing mechanics, wage garnishment, a shared pawn shop, loan repayment, automatic rent/loan due-date processing, headless AI opponents (random + greedy planners), and a working `@jones/game` state bridge with a debug command-dispatch loop. 248 tests passing.
