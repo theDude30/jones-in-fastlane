@@ -319,3 +319,25 @@ describe("Relax command", () => {
     expect(events.some((e) => e.type === "NotEnoughTime")).toBe(true);
   });
 });
+
+describe("Food & Health integration", () => {
+  it("a player who never eats erodes hours/happiness over several turns and eventually sees a Doctor Visit", () => {
+    const seed = findSeedForDoctorVisitWithin(10);
+    let g: GameState = createInitialGame(testConfig, seed, [
+      { name: "A", isAI: false, goals: { wealth: 100, happiness: 100, education: 100, career: 100 } },
+    ]);
+    const startingHappiness = g.players[0].happiness;
+    let sawStarvation = false;
+    let sawDoctorVisit = false;
+    let state = g;
+    for (let t = 0; t < 10; t++) {
+      const r = reduce(state, { type: "EndTurn" }, testConfig);
+      state = r.state;
+      if (r.events.some((e) => e.type === "PlayerStarved")) sawStarvation = true;
+      if (r.events.some((e) => e.type === "DoctorVisited")) sawDoctorVisit = true;
+    }
+    expect(sawStarvation).toBe(true);
+    expect(sawDoctorVisit).toBe(true);
+    expect(state.players[0].happiness).toBeLessThan(startingHappiness);
+  });
+});
