@@ -16,6 +16,7 @@ export function createInitialGame(
   if (setups.length < 1 || setups.length > c.maxPlayers) {
     throw new Error(`player count must be 1..${c.maxPlayers}`);
   }
+  const homeRent = config.locations.find((l) => l.id === c.homeLocationId)?.baseRent ?? 0;
   const players: PlayerState[] = setups.map((s, i) => ({
     id: `p${i}`,
     name: s.name,
@@ -52,6 +53,13 @@ export function createInitialGame(
     loanInDefault: false,
     brokerMenuOpen: false,
     lotteryTickets: 0,
+    apartmentId: c.homeLocationId,
+    currentRent: homeRent,
+    rentDueWeek: c.weeksPerMonth,
+    rentDebt: 0,
+    rentExtensionsApproved: 0,
+    everInRentDebt: false,
+    rentExtensionUsedThisTurn: false,
   }));
   return {
     week: 1,
@@ -64,5 +72,6 @@ export function createInitialGame(
     stockPrices: Object.fromEntries(
       config.stocks.map((s) => [s.id, s.basePrice])
     ) as Record<StockId, number>,
+    pawnedItems: [],
   };
 }

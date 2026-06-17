@@ -31,6 +31,7 @@ function cloneState(state: GameState): GameState {
     winners: [...state.winners],
     economy: { ...state.economy },
     stockPrices: { ...state.stockPrices },
+    pawnedItems: state.pawnedItems.map((it) => ({ ...it })),
   };
 }
 
