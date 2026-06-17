@@ -97,11 +97,54 @@ describe("legalCommands", () => {
     atStore.players[0].insideBuilding = true;
     atStore.players[0].cash = 100000;
     states.push(atStore);
+
+    // Player already at the max-enrollments cap, at the university.
+    const atCap = solo();
+    atCap.players[0].locationId = "hiTechU";
+    atCap.players[0].insideBuilding = true;
+    atCap.players[0].cash = 100000;
+    atCap.players[0].enrollments = Array.from(
+      { length: defaultConfig.constants.maxEnrollments },
+      () => ({ degreeId: "tradeSchool", lessonsRemaining: 5 }),
+    );
+    states.push(atCap);
+
+    // Player already owning a durable, at a store selling another item with the same durableType.
+    const ownsDurable = solo();
+    ownsDurable.players[0].durables = [{ itemId: "refrigeratorSocket", pricePaid: 876 }];
+    ownsDurable.players[0].locationId = "zMart";
+    ownsDurable.players[0].insideBuilding = true;
+    ownsDurable.players[0].cash = 100000;
+    states.push(ownsDurable);
+
     for (const st of states) {
       for (const cmd of legalCommands(st, "p0", defaultConfig)) {
         const { events } = reduce(st, cmd, defaultConfig);
         expect(events.some((e) => e.type === "InvalidAction")).toBe(false);
       }
     }
+  });
+
+  it("excludes Enroll for a player already at the max-enrollments cap", () => {
+    const s = solo();
+    s.players[0].locationId = "hiTechU";
+    s.players[0].insideBuilding = true;
+    s.players[0].cash = 100000;
+    s.players[0].enrollments = Array.from(
+      { length: defaultConfig.constants.maxEnrollments },
+      () => ({ degreeId: "tradeSchool", lessonsRemaining: 5 }),
+    );
+    const cmds = legalCommands(s, "p0", defaultConfig);
+    expect(cmds.some((c) => c.type === "Enroll")).toBe(false);
+  });
+
+  it("excludes BuyItem for an item sharing durableType with an already-owned durable", () => {
+    const s = solo();
+    s.players[0].durables = [{ itemId: "refrigeratorSocket", pricePaid: 876 }];
+    s.players[0].locationId = "zMart";
+    s.players[0].insideBuilding = true;
+    s.players[0].cash = 100000;
+    const cmds = legalCommands(s, "p0", defaultConfig);
+    expect(cmds.some((c) => c.type === "BuyItem" && c.itemId === "refrigeratorZMart")).toBe(false);
   });
 });

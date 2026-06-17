@@ -1,5 +1,5 @@
 import { goalScores, makeEconomy, travelHours, findJob, meetsUniform } from "@jones/core";
-import type { GameState, PlayerState, Command } from "@jones/core";
+import type { GameState, PlayerState, Command, Economy } from "@jones/core";
 import type { GoalWeights } from "@jones/config";
 import type { GameConfig } from "@jones/config";
 
@@ -43,7 +43,6 @@ export const isInside = (p: PlayerState): boolean => p.insideBuilding;
 export function legalCommands(state: GameState, playerId: string, config: GameConfig): Command[] {
   const p = findPlayer(state, playerId);
   const cmds: Command[] = [{ type: "EndTurn" }];
-  const c = config.constants;
   const ac = config.actionCosts;
 
   if (isInside(p)) {
@@ -65,8 +64,9 @@ export function legalCommands(state: GameState, playerId: string, config: GameCo
     }
 
     // Enroll / Study: at the university.
+    const economy = makeEconomy(config);
     if (atLocation(p, "hiTechU")) {
-      for (const d of enrollableDegrees(p, config)) {
+      for (const d of enrollableDegrees(p, state, config, economy)) {
         if (hasHours(p, ac.study)) cmds.push({ type: "Enroll", degreeId: d });
       }
       for (const e of p.enrollments) {
@@ -74,11 +74,16 @@ export function legalCommands(state: GameState, playerId: string, config: GameCo
       }
     }
 
-    // BuyItem: at a store, items sold here and affordable.
-    const economy = makeEconomy(config);
+    // BuyItem: at a store, items sold here, not an already-owned durable, and affordable.
     for (const item of config.items) {
       if (item.locationId !== p.locationId) continue;
-      const price = economy.adjustedPrice(item.basePrice, state.economy.reading);
+      if (item.durableType !== undefined) {
+        const alreadyOwned = p.durables.some(
+          (d) => config.items.find((i) => i.id === d.itemId)?.durableType === item.durableType,
+        );
+        if (alreadyOwned) continue;
+      }
+      const price = item.fixedPrice ? item.basePrice : economy.adjustedPrice(item.basePrice, state.economy.reading);
       if (canAfford(p, price)) cmds.push({ type: "BuyItem", itemId: item.id });
     }
   } else {
@@ -104,15 +109,17 @@ export function eligibleJobs(p: PlayerState, state: GameState, config: GameConfi
   );
 }
 
-/** Degrees the player can enroll in now (prereqs met, not owned, not enrolled, affordable). */
-export function enrollableDegrees(p: PlayerState, config: GameConfig) {
+/** Degrees the player can enroll in now (prereqs met, not owned, not enrolled, under cap, affordable). */
+export function enrollableDegrees(p: PlayerState, state: GameState, config: GameConfig, economy: Economy) {
+  const fee = economy.adjustedPrice(config.constants.enrollmentBaseFee, state.economy.reading);
   return config.degrees
     .filter(
       (d) =>
         d.prereqs.every((pr) => p.degrees.includes(pr)) &&
         !p.degrees.includes(d.id) &&
         !p.enrollments.some((e) => e.degreeId === d.id) &&
-        canAfford(p, config.constants.enrollmentBaseFee),
+        p.enrollments.length < config.constants.maxEnrollments &&
+        canAfford(p, fee),
     )
     .map((d) => d.id);
 }
