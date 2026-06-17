@@ -24,6 +24,7 @@ describe("EndTurn", () => {
     g.players[0].relaxation = 10;
     g.players[0].dependibility = 20;
     g.players[0].clothing.casual = 6;
+    g.players[0].fastFood = 1; // avoid Starvation so this test's other assertions stay isolated
     g = reduce(g, { type: "EndTurn" }, defaultConfig).state; // -> player B
     const { state, events } = reduce(g, { type: "EndTurn" }, defaultConfig); // wrap -> week 2, player A
     expect(state.currentPlayerIndex).toBe(0);
