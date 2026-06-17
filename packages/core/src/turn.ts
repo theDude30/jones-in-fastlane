@@ -13,6 +13,7 @@ export function applyStartOfWeek(p: PlayerState, config: GameConfig): void {
   p.insideBuilding = false;
   p.brokerMenuOpen = false;
   p.hoursRemaining = config.constants.hoursPerTurn;
+  p.rentExtensionUsedThisTurn = false;
 }
 
 export function advanceTurn(
