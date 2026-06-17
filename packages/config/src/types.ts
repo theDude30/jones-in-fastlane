@@ -24,6 +24,7 @@ export interface LocationDef {
   name: string;
   ringIndex: number;     // position on the board ring (clockwise)
   types: LocationType[];
+  baseRent?: number;     // monthly rent base for apartment locations
 }
 
 export interface ActionCosts {
@@ -68,6 +69,13 @@ export interface GameConstants {
   lotteryBatchPrice: number; // 10 (fixed, never economy-adjusted)
   loanPaymentAmount: number; // 50 monthly payment
   loanPaymentToDebt: number; // 45 of the $50 reduces balance; $5 is interest
+  pawnPayoutRate: number;         // 0.40 — pawn payout = 40% of current economy-adjusted value
+  pawnRedeemRate: number;         // 0.50 — redeem cost = 50% of original price paid (flat)
+  pawnSaleRate: number;           // 0.50 — for-sale price after expiry = 50% of price paid (flat)
+  pawnMaxItems: number;           // 6 — shop capacity (total)
+  pawnExpiryWeeks: number;        // 3 — weeks before an unredeemed item becomes buyable
+  garnishmentInterest: number;    // 2 — $ interest deducted per garnished work session
+  rentExtensionChances: number[]; // approval chance by # prior approvals (clamp at index 3)
 }
 
 export interface GameConfig {

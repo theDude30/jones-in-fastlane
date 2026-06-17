@@ -2,7 +2,7 @@ import type { LocationDef } from "./types.js";
 
 // §8: board order, clockwise from the top. ringIndex defines travel distance.
 export const locations: LocationDef[] = [
-  { id: "lowCostHousing", name: "Low-Cost Housing", ringIndex: 0, types: ["apartment"] },
+  { id: "lowCostHousing", name: "Low-Cost Housing", ringIndex: 0, types: ["apartment"], baseRent: 325 },
   { id: "pawnShop", name: "Pawn Shop", ringIndex: 1, types: ["service"] },
   { id: "zMart", name: "Z-Mart", ringIndex: 2, types: ["store", "workplace"] },
   { id: "monolithBurgers", name: "Monolith Burgers", ringIndex: 3, types: ["store", "workplace"] },
@@ -13,6 +13,6 @@ export const locations: LocationDef[] = [
   { id: "factory", name: "Factory", ringIndex: 8, types: ["workplace"] },
   { id: "bank", name: "Bank", ringIndex: 9, types: ["service", "workplace"] },
   { id: "blacksMarket", name: "Black's Market", ringIndex: 10, types: ["store", "workplace"] },
-  { id: "securityApartments", name: "Le Security Apartments", ringIndex: 11, types: ["apartment"] },
+  { id: "securityApartments", name: "Le Security Apartments", ringIndex: 11, types: ["apartment"], baseRent: 475 },
   { id: "rentOffice", name: "Rent Office", ringIndex: 12, types: ["service", "workplace"] },
 ];

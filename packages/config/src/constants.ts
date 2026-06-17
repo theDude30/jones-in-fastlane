@@ -27,4 +27,11 @@ export const constants: GameConstants = {
   lotteryBatchPrice: 10,
   loanPaymentAmount: 50,
   loanPaymentToDebt: 45,
+  pawnPayoutRate: 0.4,
+  pawnRedeemRate: 0.5,
+  pawnSaleRate: 0.5,
+  pawnMaxItems: 6,
+  pawnExpiryWeeks: 3,
+  garnishmentInterest: 2,
+  rentExtensionChances: [1.0, 0.75, 0.5, 0.25],
 };
