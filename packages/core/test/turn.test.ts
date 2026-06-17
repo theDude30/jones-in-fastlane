@@ -25,6 +25,9 @@ describe("EndTurn", () => {
     g.players[0].dependibility = 20;
     g.players[0].clothing.casual = 6;
     g.players[0].fastFood = 1; // avoid Starvation so this test's other assertions stay isolated
+    g.players[0].cash = 0; // relaxation sits at the decay floor (10), which is Doctor-Visit-eligible;
+    // cash=0 deterministically blocks any visit's effects regardless of the roll, so this
+    // test isn't coupled to seed 1 happening to avoid that 20% chance.
     g = reduce(g, { type: "EndTurn" }, defaultConfig).state; // -> player B
     const { state, events } = reduce(g, { type: "EndTurn" }, defaultConfig); // wrap -> week 2, player A
     expect(state.currentPlayerIndex).toBe(0);
