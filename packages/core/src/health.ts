@@ -106,3 +106,28 @@ export function applyFoodAndHealth(
     });
   }
 }
+
+/** §2 Relax — only at the player's own apartment; restores Relaxation, first-per-turn happiness. */
+export function relax(state: GameState, config: GameConfig, events: GameEvent[]): void {
+  const p = state.players[state.currentPlayerIndex];
+
+  if (!p.insideBuilding || p.locationId !== p.apartmentId) {
+    events.push({ type: "InvalidAction", playerId: p.id, reason: "must be at your own apartment" });
+    return;
+  }
+  if (config.actionCosts.relax > p.hoursRemaining) {
+    events.push({ type: "NotEnoughTime", playerId: p.id, action: "Relax" });
+    return;
+  }
+  p.hoursRemaining -= config.actionCosts.relax;
+  p.relaxation = Math.min(config.constants.maxRelaxation, p.relaxation + config.constants.relaxAmount);
+
+  let happinessGained = 0;
+  if (!p.happyGroupsThisTurn.includes("relax")) {
+    happinessGained = 2;
+    p.happiness += happinessGained;
+    p.happyGroupsThisTurn.push("relax");
+  }
+
+  events.push({ type: "Relaxed", playerId: p.id, relaxation: p.relaxation, happinessGained });
+}

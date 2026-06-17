@@ -261,3 +261,61 @@ describe("Doctor Visit", () => {
     expect(events.some((e) => e.type === "DoctorVisited")).toBe(false);
   });
 });
+
+describe("Relax command", () => {
+  it("restores relaxation (capped at 50) and costs 6 hours at the player's own apartment", () => {
+    const g = soloGame();
+    g.players[0].locationId = g.players[0].apartmentId;
+    g.players[0].insideBuilding = true;
+    g.players[0].relaxation = 10;
+    const { state, events } = reduce(g, { type: "Relax" }, testConfig);
+    expect(state.players[0].relaxation).toBe(13);
+    expect(state.players[0].hoursRemaining).toBe(54);
+    expect(events.some((e) => e.type === "Relaxed")).toBe(true);
+  });
+
+  it("caps relaxation at 50", () => {
+    const g = soloGame();
+    g.players[0].locationId = g.players[0].apartmentId;
+    g.players[0].insideBuilding = true;
+    g.players[0].relaxation = 49;
+    const { state } = reduce(g, { type: "Relax" }, testConfig);
+    expect(state.players[0].relaxation).toBe(50);
+  });
+
+  it("is illegal outside the player's own apartment", () => {
+    const g = soloGame();
+    g.players[0].locationId = "zMart";
+    g.players[0].insideBuilding = true;
+    const { events } = reduce(g, { type: "Relax" }, testConfig);
+    expect(events.some((e) => e.type === "InvalidAction")).toBe(true);
+  });
+
+  it("is illegal when not inside a building", () => {
+    const g = soloGame();
+    g.players[0].locationId = g.players[0].apartmentId;
+    g.players[0].insideBuilding = false;
+    const { events } = reduce(g, { type: "Relax" }, testConfig);
+    expect(events.some((e) => e.type === "InvalidAction")).toBe(true);
+  });
+
+  it("grants +2 happiness only the first time per turn", () => {
+    const g = soloGame();
+    g.players[0].locationId = g.players[0].apartmentId;
+    g.players[0].insideBuilding = true;
+    g.players[0].happiness = 5;
+    const first = reduce(g, { type: "Relax" }, testConfig);
+    expect(first.state.players[0].happiness).toBe(7);
+    const second = reduce(first.state, { type: "Relax" }, testConfig);
+    expect(second.state.players[0].happiness).toBe(7); // no further gain this turn
+  });
+
+  it("emits NotEnoughTime when hours are insufficient", () => {
+    const g = soloGame();
+    g.players[0].locationId = g.players[0].apartmentId;
+    g.players[0].insideBuilding = true;
+    g.players[0].hoursRemaining = 5;
+    const { events } = reduce(g, { type: "Relax" }, testConfig);
+    expect(events.some((e) => e.type === "NotEnoughTime")).toBe(true);
+  });
+});
