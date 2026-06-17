@@ -1,6 +1,6 @@
 import { nextFloat, nextInt, makeEconomy, travelHours, findJob, meetsUniform } from "@jones/core";
 import type { Command, GameState, PlayerState, RngState } from "@jones/core";
-import type { GameConfig, AIDifficultyPreset } from "@jones/config";
+import type { GameConfig, AIDifficultyPreset, UniformLevel } from "@jones/config";
 import type { Agent } from "./types.js";
 import {
   GoalKey,
@@ -55,7 +55,7 @@ export class GreedyPlanner implements Agent {
     switch (goal) {
       case "wealth":
       case "career":
-        return p.jobId !== null ? this.work(p) : this.getJob(p, state);
+        return p.jobId !== null ? this.work(p, state) : this.getJob(p, state);
       case "education":
         return this.educate(p, state);
       case "happiness":
@@ -63,21 +63,39 @@ export class GreedyPlanner implements Agent {
     }
   }
 
-  /** Navigate to the workplace and Work. */
-  private work(p: PlayerState): Command | null {
+  /** Navigate to the workplace and Work — or buy the required uniform first if it's lapsed. */
+  private work(p: PlayerState, state: GameState): Command | null {
     const job = findJob(this.config, p.jobId as string);
+    if (!meetsUniform(p, job.uniform)) {
+      return this.buyUniform(p, state, job.uniform);
+    }
     const nav = this.navigateInto(p, job.locationId);
     if (nav) return nav;
     if (
       atLocation(p, job.locationId) &&
       isInside(p) &&
       p.hoursRemaining > 0 &&
-      meetsUniform(p, job.uniform) &&
       p.dependibility >= job.reqDependibility - 5
     ) {
       return { type: "Work" };
     }
     return null;
+  }
+
+  /** Navigate to a store and buy the cheapest affordable item satisfying the required uniform level. */
+  private buyUniform(p: PlayerState, state: GameState, level: UniformLevel): Command | null {
+    const economy = makeEconomy(this.config);
+    const candidates = this.config.items
+      .filter((it) => it.clothingCategory === level)
+      .map((it) => ({ it, price: economy.adjustedPrice(it.basePrice, state.economy.reading) }))
+      .filter(({ price }) => canAfford(p, price))
+      .sort((a, b) => a.price - b.price);
+    if (candidates.length === 0) return null;
+    const target = candidates[0].it;
+    const nav = this.navigateInto(p, target.locationId);
+    if (nav) return nav;
+    if (!atLocation(p, target.locationId) || !isInside(p)) return null;
+    return { type: "BuyItem", itemId: target.id };
   }
 
   /** Navigate to the Employment Office and apply for the best eligible job. */

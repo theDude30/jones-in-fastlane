@@ -49,6 +49,35 @@ describe("GreedyPlanner", () => {
     expect(planner.nextCommand(s, "p0")).toEqual({ type: "Work" });
   });
 
+  it("buys required uniform clothing instead of attempting Work when the uniform isn't met", () => {
+    const s = solo({ wealth: 100, happiness: 0, education: 1, career: 100 });
+    const p = s.players[0];
+    p.jobId = "zMart.clerk"; // requires uniform: "casual"
+    p.wage = 10;
+    p.locationId = "zMart";
+    p.insideBuilding = true;
+    p.clothing = { casual: 0, dress: 0, business: 0 }; // ran out of starting clothing
+    p.cash = 1000;
+    const planner = new GreedyPlanner(5, HARD, defaultConfig);
+    // casualClothesZMart is sold at zMart (where the player already is) for 35.
+    expect(planner.nextCommand(s, "p0")).toEqual({ type: "BuyItem", itemId: "casualClothesZMart" });
+  });
+
+  it("resumes Work once the bought clothing satisfies the uniform requirement", () => {
+    const s = solo({ wealth: 100, happiness: 0, education: 1, career: 100 });
+    const p = s.players[0];
+    p.jobId = "zMart.clerk";
+    p.wage = 10;
+    p.locationId = "zMart";
+    p.insideBuilding = true;
+    p.clothing = { casual: 0, dress: 0, business: 0 };
+    p.cash = 1000;
+    const planner = new GreedyPlanner(5, HARD, defaultConfig);
+    const buy = planner.nextCommand(s, "p0");
+    const { state: afterBuy } = reduce(s, buy, defaultConfig);
+    expect(planner.nextCommand(afterBuy, "p0")).toEqual({ type: "Work" });
+  });
+
   it("epsilon=1 always takes a legal random action", () => {
     const preset = { planner: "greedy" as const, weights: HARD.weights, epsilon: 1 };
     const planner = new GreedyPlanner(5, preset, defaultConfig);
