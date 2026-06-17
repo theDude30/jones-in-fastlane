@@ -295,3 +295,63 @@ describe("housing & pawn flow", () => {
     expect(allEvents.some((e) => e.type === "ApartmentSwitched")).toBe(true);
   });
 });
+
+describe("rent debt & loan default lifecycle", () => {
+  it("misses rent → debt accrues → work garnishes it; defaults a loan → PayLoan clears default", () => {
+    const config = { ...defaultConfig, economy: constantEconomyConfig };
+    let state = createInitialGame(config, 0, [
+      { name: "A", isAI: false, goals: { wealth: 100, happiness: 100, education: 100, career: 100 } },
+    ]);
+    const p0 = state.players[0];
+    p0.cash = 5000;
+    // A job so Work earns wages to garnish.
+    p0.jobId = "zMart.clerk";
+    p0.wage = 10;
+    p0.maxExperience = 50;
+    p0.maxDependibility = 50;
+    p0.dependibility = 50;
+    // An outstanding loan due at week 4.
+    p0.loanBalance = 1000;
+    p0.loanDueWeek = 4;
+
+    const allEvents: GameEvent[] = [];
+    function step(cmd: Parameters<typeof reduce>[1]) {
+      const r = reduce(state, cmd, config);
+      state = r.state;
+      allEvents.push(...r.events);
+    }
+
+    // Advance to week 5: both the rent (due week 4) and loan (due week 4) periods lapse unpaid.
+    while (state.week < 5) step({ type: "EndTurn" });
+
+    let p = state.players[0];
+    expect(p.rentDebt).toBe(325);
+    expect(p.everInRentDebt).toBe(true);
+    expect(p.loanInDefault).toBe(true);
+    expect(p.timesDefaulted).toBe(1);
+    expect(allEvents.some((e) => e.type === "RentDebtIncurred")).toBe(true);
+    expect(allEvents.some((e) => e.type === "LoanDefaulted")).toBe(true);
+
+    // Work one session at Z-Mart: earned = floor(8 * 10 * 6 / 6) = 80; half (40) → debt, $2 interest.
+    step({ type: "TravelTo", locationId: "zMart" });
+    step({ type: "EnterBuilding" });
+    const cashBeforeWork = state.players[0].cash;
+    step({ type: "Work" });
+    p = state.players[0];
+    expect(p.rentDebt).toBe(285);                 // 325 - 40
+    expect(p.cash).toBe(cashBeforeWork + 38);     // 80 - 40 - 2
+    expect(allEvents.some((e) => e.type === "Garnished" && e.toDebt === 40 && e.interest === 2)).toBe(true);
+
+    // Pay down the defaulted loan at the Bank: clears the default flag.
+    step({ type: "ExitBuilding" });
+    step({ type: "TravelTo", locationId: "bank" });
+    step({ type: "EnterBuilding" });
+    const cashBeforePay = state.players[0].cash;
+    step({ type: "PayLoan" });
+    p = state.players[0];
+    expect(p.loanInDefault).toBe(false);
+    expect(p.loanBalance).toBe(955);              // 1000 - 45
+    expect(p.cash).toBe(cashBeforePay - 50);
+    expect(allEvents.some((e) => e.type === "LoanPaid")).toBe(true);
+  });
+});
