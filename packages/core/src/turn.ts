@@ -2,9 +2,16 @@ import type { GameConfig } from "@jones/config";
 import type { GameEvent, GameState, PlayerState } from "./types.js";
 import type { Economy } from "./economy.js";
 import { hasWon } from "./goals.js";
+import { ownsDurableType } from "./health.js";
 
 export function applyStartOfWeek(p: PlayerState, config: GameConfig): void {
-  p.relaxation = Math.max(10, p.relaxation - 1);
+  p.happyGroupsThisTurn = [];
+  if (ownsDurableType(p, config, "stove") || ownsDurableType(p, config, "microwave")) {
+    p.happiness += 1;
+  }
+  if (!ownsDurableType(p, config, "hotTub")) {
+    p.relaxation = Math.max(10, p.relaxation - 1);
+  }
   p.dependibility = Math.max(0, p.dependibility - config.constants.dependibilityDecayPerWeek);
   p.clothing.casual = Math.max(0, p.clothing.casual - 1);
   p.clothing.dress = Math.max(0, p.clothing.dress - 1);
