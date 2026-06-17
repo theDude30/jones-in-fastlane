@@ -5,7 +5,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b packages/config packages/core"
+    "typecheck": "tsc -b packages/config packages/core packages/ai"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

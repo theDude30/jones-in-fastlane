@@ -18,6 +18,15 @@ importers:
         specifier: ^2.0.0
         version: 2.1.9
 
+  packages/ai:
+    dependencies:
+      '@jones/config':
+        specifier: workspace:*
+        version: link:../config
+      '@jones/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/config: {}
 
   packages/core:
