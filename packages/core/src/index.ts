@@ -11,3 +11,4 @@ export * from "./hire.js";
 export * from "./education.js";
 export * from "./shopping.js";
 export * from "./finance.js";
+export * from "./housing.js";

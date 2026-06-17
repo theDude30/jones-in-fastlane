@@ -8,6 +8,7 @@ import { applyForJob, requestRaise, quitJob } from "./hire.js";
 import { enroll, study } from "./education.js";
 import { buyItem } from "./shopping.js";
 import { deposit, withdraw, applyLoan, openBroker, buyStock, sellStock, buyTBill, sellTBill, buyLotteryTickets } from "./finance.js";
+import { payRent, requestRentExtension, switchApartment } from "./housing.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
@@ -172,6 +173,15 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
       break;
     case "BuyLotteryTickets":
       buyLotteryTickets(next, config, events);
+      break;
+    case "PayRent":
+      payRent(next, config, events);
+      break;
+    case "RequestRentExtension":
+      requestRentExtension(next, config, events);
+      break;
+    case "SwitchApartment":
+      switchApartment(next, config, economy, events);
       break;
     default:
       events.push({ type: "InvalidAction", playerId: p.id, reason: `unhandled command ${(command as Command).type}` });
