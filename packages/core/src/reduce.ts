@@ -10,6 +10,7 @@ import { buyItem } from "./shopping.js";
 import { deposit, withdraw, applyLoan, payLoan, openBroker, buyStock, sellStock, buyTBill, sellTBill, buyLotteryTickets } from "./finance.js";
 import { payRent, requestRentExtension, switchApartment, applyGarnishment } from "./housing.js";
 import { pawnItem, redeemItem, buyPawnedItem } from "./pawn.js";
+import { relax } from "./health.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
@@ -117,6 +118,10 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
       if (p.experience < p.maxExperience) p.experience += 1;
       if (p.dependibility < p.maxDependibility) p.dependibility += 1;
       events.push({ type: "Worked", playerId: p.id, earned });
+      break;
+    }
+    case "Relax": {
+      relax(next, config, events);
       break;
     }
     case "EndTurn": {

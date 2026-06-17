@@ -76,6 +76,12 @@ export interface GameConstants {
   pawnExpiryWeeks: number;        // 3 — weeks before an unredeemed item becomes buyable
   garnishmentInterest: number;    // 2 — $ interest deducted per garnished work session
   rentExtensionChances: number[]; // approval chance by # prior approvals (clamp at index 3)
+  relaxAmount: number;            // 3   §2 — Relax action: +3 Relaxation per use
+  maxRelaxation: number;          // 50  §12 — Relaxation cap (decay floor is separately 10)
+  freshFoodFridgeCapacity: number; // 6  §11 — Fresh Food storage with a Refrigerator
+  freshFoodFreezerBonus: number;   // 6  §11 — +6 capacity (total 12) if a Freezer is also owned
+  starvationHoursLost: number;     // 20 §12 — Starvation start-of-turn Hours penalty
+  doctorHoursLost: number;         // 10 §12 — Doctor Visit start-of-turn Hours penalty
 }
 
 export interface GameConfig {
