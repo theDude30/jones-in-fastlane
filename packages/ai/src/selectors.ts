@@ -1,6 +1,7 @@
-import { goalScores } from "@jones/core";
-import type { GameState, PlayerState } from "@jones/core";
+import { goalScores, makeEconomy, travelHours, findJob, meetsUniform } from "@jones/core";
+import type { GameState, PlayerState, Command } from "@jones/core";
 import type { GoalWeights } from "@jones/config";
+import type { GameConfig } from "@jones/config";
 
 export type GoalKey = "wealth" | "happiness" | "education" | "career";
 export const GOAL_KEYS: GoalKey[] = ["wealth", "happiness", "education", "career"];
@@ -33,3 +34,85 @@ export const canAfford = (p: PlayerState, cost: number): boolean => p.cash >= co
 export const hasHours = (p: PlayerState, cost: number): boolean => p.hoursRemaining >= cost;
 export const atLocation = (p: PlayerState, locationId: string): boolean => p.locationId === locationId;
 export const isInside = (p: PlayerState): boolean => p.insideBuilding;
+
+/**
+ * A conservative set of commands that `reduce` will currently accept for this
+ * player, restricted to the M3 AI repertoire (navigation, Work, ApplyForJob,
+ * Enroll, Study, BuyItem, EndTurn). Used by RandomPlanner and greedy mistakes.
+ */
+export function legalCommands(state: GameState, playerId: string, config: GameConfig): Command[] {
+  const p = findPlayer(state, playerId);
+  const cmds: Command[] = [{ type: "EndTurn" }];
+  const c = config.constants;
+  const ac = config.actionCosts;
+
+  if (isInside(p)) {
+    cmds.push({ type: "ExitBuilding" });
+
+    // Work: at our workplace, employed, hours left, dependibility ok, uniform met.
+    if (p.jobId !== null) {
+      const job = findJob(config, p.jobId);
+      if (atLocation(p, job.locationId) && p.hoursRemaining > 0 && meetsUniform(p, job.uniform) && p.dependibility >= job.reqDependibility - 5) {
+        cmds.push({ type: "Work" });
+      }
+    }
+
+    // ApplyForJob: at the Employment Office, with hours, for each fully-eligible job.
+    if (atLocation(p, "employmentOffice") && hasHours(p, ac.applyJob)) {
+      for (const job of eligibleJobs(p, state, config)) {
+        cmds.push({ type: "ApplyForJob", jobId: job.id });
+      }
+    }
+
+    // Enroll / Study: at the university.
+    if (atLocation(p, "hiTechU")) {
+      for (const d of enrollableDegrees(p, config)) {
+        if (hasHours(p, ac.study)) cmds.push({ type: "Enroll", degreeId: d });
+      }
+      for (const e of p.enrollments) {
+        if (hasHours(p, ac.study)) cmds.push({ type: "Study", degreeId: e.degreeId });
+      }
+    }
+
+    // BuyItem: at a store, items sold here and affordable.
+    const economy = makeEconomy(config);
+    for (const item of config.items) {
+      if (item.locationId !== p.locationId) continue;
+      const price = economy.adjustedPrice(item.basePrice, state.economy.reading);
+      if (canAfford(p, price)) cmds.push({ type: "BuyItem", itemId: item.id });
+    }
+  } else {
+    if (hasHours(p, ac.enterLocation)) cmds.push({ type: "EnterBuilding" });
+    for (const loc of config.locations) {
+      if (loc.id === p.locationId) continue;
+      const cost = travelHours(config, p.locationId, loc.id);
+      if (hasHours(p, cost)) cmds.push({ type: "TravelTo", locationId: loc.id });
+    }
+  }
+
+  return cmds;
+}
+
+/** Jobs whose stat gates the player currently satisfies. */
+export function eligibleJobs(p: PlayerState, state: GameState, config: GameConfig) {
+  const depGate = state.week > 4;
+  return config.jobs.filter(
+    (job) =>
+      p.experience >= job.reqExperience &&
+      (!depGate || p.dependibility >= job.reqDependibility) &&
+      job.reqDegrees.every((d) => p.degrees.includes(d)),
+  );
+}
+
+/** Degrees the player can enroll in now (prereqs met, not owned, not enrolled, affordable). */
+export function enrollableDegrees(p: PlayerState, config: GameConfig) {
+  return config.degrees
+    .filter(
+      (d) =>
+        d.prereqs.every((pr) => p.degrees.includes(pr)) &&
+        !p.degrees.includes(d.id) &&
+        !p.enrollments.some((e) => e.degreeId === d.id) &&
+        canAfford(p, config.constants.enrollmentBaseFee),
+    )
+    .map((d) => d.id);
+}

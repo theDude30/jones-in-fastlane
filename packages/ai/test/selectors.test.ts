@@ -61,3 +61,47 @@ describe("feasibility predicates", () => {
     expect(isInside(p)).toBe(true);
   });
 });
+
+import { legalCommands } from "../src/selectors.js";
+import { reduce } from "@jones/core";
+
+describe("legalCommands", () => {
+  it("always includes EndTurn", () => {
+    const s = solo();
+    const cmds = legalCommands(s, "p0", defaultConfig);
+    expect(cmds.some((c) => c.type === "EndTurn")).toBe(true);
+  });
+
+  it("outside at home offers EnterBuilding and TravelTo, not ExitBuilding", () => {
+    const s = solo();
+    const cmds = legalCommands(s, "p0", defaultConfig);
+    expect(cmds.some((c) => c.type === "EnterBuilding")).toBe(true);
+    expect(cmds.some((c) => c.type === "TravelTo")).toBe(true);
+    expect(cmds.some((c) => c.type === "ExitBuilding")).toBe(false);
+  });
+
+  it("inside offers ExitBuilding", () => {
+    const s = solo();
+    s.players[0].insideBuilding = true;
+    const cmds = legalCommands(s, "p0", defaultConfig);
+    expect(cmds.some((c) => c.type === "ExitBuilding")).toBe(true);
+  });
+
+  it("every returned command is accepted by reduce (no InvalidAction)", () => {
+    // Sample several representative states and assert legality.
+    const states: GameState[] = [];
+    const home = solo(); states.push(home);
+    const inHome = solo(); inHome.players[0].insideBuilding = true; states.push(inHome);
+    const atStore = solo();
+    atStore.players[0].locationId = "monolithBurgers";
+    atStore.players[0].insideBuilding = true;
+    atStore.players[0].cash = 100000;
+    states.push(atStore);
+    for (const st of states) {
+      for (const cmd of legalCommands(st, "p0", defaultConfig)) {
+        const { events } = reduce(st, cmd, defaultConfig);
+        expect(events.some((e) => e.type === "InvalidAction")).toBe(false);
+      }
+    }
+  });
+});
