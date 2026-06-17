@@ -9,6 +9,7 @@ import { enroll, study } from "./education.js";
 import { buyItem } from "./shopping.js";
 import { deposit, withdraw, applyLoan, openBroker, buyStock, sellStock, buyTBill, sellTBill, buyLotteryTickets } from "./finance.js";
 import { payRent, requestRentExtension, switchApartment, applyGarnishment } from "./housing.js";
+import { pawnItem, redeemItem, buyPawnedItem } from "./pawn.js";
 
 function current(state: GameState): PlayerState {
   return state.players[state.currentPlayerIndex];
@@ -182,6 +183,15 @@ export function reduce(state: GameState, command: Command, config: GameConfig): 
       break;
     case "SwitchApartment":
       switchApartment(next, config, economy, events);
+      break;
+    case "PawnItem":
+      pawnItem(command.itemId, next, config, economy, events);
+      break;
+    case "RedeemItem":
+      redeemItem(command.itemId, next, config, events);
+      break;
+    case "BuyPawnedItem":
+      buyPawnedItem(command.itemId, next, config, events);
       break;
     default:
       events.push({ type: "InvalidAction", playerId: p.id, reason: `unhandled command ${(command as Command).type}` });
