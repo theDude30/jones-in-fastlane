@@ -2,6 +2,7 @@ import { useGameStore } from "../store/gameStore.js";
 import { StoreScreen } from "./panels/StoreScreen.js";
 import { WorkplaceScreen } from "./panels/WorkplaceScreen.js";
 import { BankScreen } from "./panels/BankScreen.js";
+import { PawnShopScreen } from "./panels/PawnShopScreen.js";
 
 export function LocationScreen() {
   const config = useGameStore((s) => s.config);
@@ -20,6 +21,7 @@ export function LocationScreen() {
       {location.types.includes("store") && <StoreScreen locationId={location.id} />}
       {isWorkplaceHere && <WorkplaceScreen />}
       {location.id === "bank" && <BankScreen />}
+      {location.id === "pawnShop" && <PawnShopScreen />}
     </div>
   );
 }
