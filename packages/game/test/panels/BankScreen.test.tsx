@@ -51,4 +51,14 @@ describe("BankScreen", () => {
     expect(useGameStore.getState().state!.players[0].brokerMenuOpen).toBe(true);
     expect(screen.getByText(/Gold/)).toBeInTheDocument();
   });
+
+  it("Back to Bank actually returns to the main bank view", () => {
+    atBank();
+    render(<BankScreen />);
+    fireEvent.click(screen.getByText("See The Broker"));
+    expect(screen.getByText(/Gold/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Back to Bank"));
+    expect(screen.getByText("Deposit")).toBeInTheDocument();
+    expect(screen.queryByText(/Gold/)).not.toBeInTheDocument();
+  });
 });

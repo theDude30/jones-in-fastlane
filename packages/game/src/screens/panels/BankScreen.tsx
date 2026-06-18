@@ -6,12 +6,14 @@ export function BankScreen() {
   const state = useGameStore((s) => s.state);
   const dispatch = useGameStore((s) => s.dispatch);
   const [amount, setAmount] = useState(100);
-  const [viewingBroker, setViewingBroker] = useState(false);
+  const [viewingBroker, setViewingBroker] = useState(
+    state?.players[state.currentPlayerIndex]?.brokerMenuOpen ?? false,
+  );
 
   if (!state) return null;
   const p = state.players[state.currentPlayerIndex];
 
-  if (viewingBroker || p.brokerMenuOpen) {
+  if (viewingBroker) {
     return (
       <section>
         <button onClick={() => setViewingBroker(false)}>Back to Bank</button>
