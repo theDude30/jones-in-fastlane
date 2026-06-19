@@ -5,6 +5,9 @@ import { BankScreen } from "./panels/BankScreen.js";
 import { PawnShopScreen } from "./panels/PawnShopScreen.js";
 import { UniversityScreen } from "./panels/UniversityScreen.js";
 import { EmploymentOfficeScreen } from "./panels/EmploymentOfficeScreen.js";
+import { RentOfficeScreen } from "./panels/RentOfficeScreen.js";
+import { HomeScreen } from "./panels/HomeScreen.js";
+import { ApartmentForRentScreen } from "./panels/ApartmentForRentScreen.js";
 
 export function LocationScreen() {
   const config = useGameStore((s) => s.config);
@@ -26,6 +29,9 @@ export function LocationScreen() {
       {location.id === "pawnShop" && <PawnShopScreen />}
       {location.id === "hiTechU" && <UniversityScreen />}
       {location.id === "employmentOffice" && <EmploymentOfficeScreen />}
+      {location.id === "rentOffice" && <RentOfficeScreen />}
+      {location.types.includes("apartment") &&
+        (p.apartmentId === location.id ? <HomeScreen /> : <ApartmentForRentScreen />)}
     </div>
   );
 }
