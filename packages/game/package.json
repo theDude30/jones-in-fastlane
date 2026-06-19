@@ -7,6 +7,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@jones/ai": "workspace:*",
     "@jones/config": "workspace:*",
     "@jones/core": "workspace:*",
     "react": "^18.3.1",

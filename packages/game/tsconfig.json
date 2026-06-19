@@ -6,6 +6,6 @@
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
-  "references": [{ "path": "../config" }, { "path": "../core" }],
+  "references": [{ "path": "../config" }, { "path": "../core" }, { "path": "../ai" }],
   "include": ["src"]
 }
