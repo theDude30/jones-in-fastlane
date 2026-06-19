@@ -3,6 +3,7 @@ import { StoreScreen } from "./panels/StoreScreen.js";
 import { WorkplaceScreen } from "./panels/WorkplaceScreen.js";
 import { BankScreen } from "./panels/BankScreen.js";
 import { PawnShopScreen } from "./panels/PawnShopScreen.js";
+import { UniversityScreen } from "./panels/UniversityScreen.js";
 
 export function LocationScreen() {
   const config = useGameStore((s) => s.config);
@@ -22,6 +23,7 @@ export function LocationScreen() {
       {isWorkplaceHere && <WorkplaceScreen />}
       {location.id === "bank" && <BankScreen />}
       {location.id === "pawnShop" && <PawnShopScreen />}
+      {location.id === "hiTechU" && <UniversityScreen />}
     </div>
   );
 }
