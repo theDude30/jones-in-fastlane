@@ -2,11 +2,13 @@ import { describe, it, expect } from "vitest";
 import { defaultConfig } from "@jones/config";
 import { createInitialGame } from "../src/setup.js";
 import { reduce } from "../src/reduce.js";
+import { resetToFreshTurn } from "./testHelpers.js";
 
 function gameAt(locationId: string) {
   const g = createInitialGame(defaultConfig, 1, [
     { name: "A", isAI: false, goals: { wealth: 10, happiness: 10, education: 10, career: 10 } },
   ]);
+  resetToFreshTurn(g, defaultConfig, 1);
   g.players[0].locationId = locationId;
   return g;
 }

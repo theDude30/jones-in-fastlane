@@ -3,6 +3,7 @@ import { defaultConfig, constantEconomyConfig } from "@jones/config";
 import { createInitialGame } from "../src/setup.js";
 import { reduce } from "../src/reduce.js";
 import type { GameState } from "../src/types.js";
+import { resetToFreshTurn } from "./testHelpers.js";
 
 const testConfig = { ...defaultConfig, economy: constantEconomyConfig };
 
@@ -10,6 +11,7 @@ function pawnGame(): GameState {
   const state = createInitialGame(testConfig, 0, [
     { name: "A", isAI: false, goals: { wealth: 50, happiness: 50, education: 50, career: 50 } },
   ]);
+  resetToFreshTurn(state, testConfig, 0);
   const p = state.players[0];
   p.locationId = "pawnShop";
   p.insideBuilding = true;

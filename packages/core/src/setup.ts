@@ -1,5 +1,8 @@
 import type { GameConfig, StockId } from "@jones/config";
-import type { GameState, GoalTargets, PlayerState } from "./types.js";
+import type { GameEvent, GameState, GoalTargets, PlayerState } from "./types.js";
+import { applyStartOfWeek, applyDueDates } from "./turn.js";
+import { applyFoodAndHealth } from "./health.js";
+import { hasWon } from "./goals.js";
 
 export interface PlayerSetup {
   name: string;
@@ -61,7 +64,7 @@ export function createInitialGame(
     everInRentDebt: false,
     rentExtensionUsedThisTurn: false,
   }));
-  return {
+  const state: GameState = {
     week: 1,
     currentPlayerIndex: 0,
     players,
@@ -74,4 +77,23 @@ export function createInitialGame(
     ) as Record<StockId, number>,
     pawnedItems: [],
   };
+
+  // Mirrors advanceTurn's tail exactly: every seat undergoes one start-of-turn
+  // pass (decay, due dates, food/health) before its first action. advanceTurn
+  // already does this for every seat the moment it becomes "upNext" — seat 0
+  // never goes through advanceTurn for its own first turn, so it needs the
+  // same pass run here, at creation, or it gets an undeserved free pass (e.g.
+  // never starving despite starting with no food, while every other seat does).
+  const discardedEvents: GameEvent[] = [];
+  const first = state.players[0];
+  applyStartOfWeek(first, config);
+  if (hasWon(first)) {
+    state.winners.push(first.id);
+    state.status = "ended";
+  } else {
+    applyDueDates(first, state, config, discardedEvents);
+    applyFoodAndHealth(first, state, config, discardedEvents);
+  }
+
+  return state;
 }

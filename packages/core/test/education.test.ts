@@ -3,6 +3,7 @@ import { defaultConfig, constantEconomyConfig } from "@jones/config";
 import { createInitialGame } from "../src/setup.js";
 import { reduce } from "../src/reduce.js";
 import type { GameState } from "../src/types.js";
+import { resetToFreshTurn } from "./testHelpers.js";
 
 const testConfig = { ...defaultConfig, economy: constantEconomyConfig };
 
@@ -10,6 +11,7 @@ function eduGame(): GameState {
   const g = createInitialGame(testConfig, 1, [
     { name: "A", isAI: false, goals: { wealth: 10, happiness: 10, education: 10, career: 10 } },
   ]);
+  resetToFreshTurn(g, testConfig, 1);
   g.players[0].locationId = "hiTechU";
   g.players[0].insideBuilding = true;
   g.players[0].cash = 500;

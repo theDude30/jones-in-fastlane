@@ -5,9 +5,24 @@ import type { GameState, PlayerState } from "@jones/core";
 import { findPlayer, weakestGoal, canAfford, hasHours, atLocation, isInside } from "../src/selectors.js";
 
 function solo(): GameState {
-  return createInitialGame(defaultConfig, 1, [
+  const g = createInitialGame(defaultConfig, 1, [
     { name: "A", isAI: true, goals: { wealth: 100, happiness: 100, education: 100, career: 100 } },
   ]);
+  // createInitialGame now runs one start-of-turn pass (decay, food/health) on
+  // seat 0 at creation (bug fix: every other seat already got this on its own
+  // first turn) — an unfed fresh player loses hours/happiness immediately.
+  // Reset to a clean baseline so this file's selector tests aren't coupled
+  // to that.
+  const c = defaultConfig.constants;
+  const p = g.players[0];
+  p.hoursRemaining = c.hoursPerTurn;
+  p.happiness = 0;
+  p.cash = c.initialCash;
+  p.relaxation = c.initialRelaxation;
+  p.dependibility = c.initialDependibility;
+  p.clothing = { casual: c.initialCasualWeeks, dress: 0, business: 0 };
+  g.rng = { seed: 1 };
+  return g;
 }
 
 describe("findPlayer", () => {

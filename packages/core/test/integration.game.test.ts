@@ -3,6 +3,7 @@ import { defaultConfig, constantEconomyConfig } from "@jones/config";
 import { createInitialGame } from "../src/setup.js";
 import { reduce } from "../src/reduce.js";
 import type { Command, GameState, GameEvent } from "../src/types.js";
+import { resetToFreshTurn } from "./testHelpers.js";
 
 const testConfig = { ...defaultConfig, economy: constantEconomyConfig };
 
@@ -19,6 +20,7 @@ describe("headless game", () => {
     const game = createInitialGame(defaultConfig, 7, [
       { name: "Solo", isAI: false, goals: { wealth: 100, happiness: 100, education: 100, career: 100 } },
     ]);
+    resetToFreshTurn(game, defaultConfig, 7);
     game.players[0].jobId = "zMart.clerk";
     game.players[0].wage = 5;
     game.players[0].maxExperience = 30;
@@ -76,6 +78,7 @@ describe("employment flow", () => {
     let state = createInitialGame(defaultConfig, 42, [
       { name: "Solo", isAI: false, goals: { wealth: 100, happiness: 100, education: 100, career: 100 } },
     ]);
+    resetToFreshTurn(state, defaultConfig, 42);
     const allEvents: GameEvent[] = [];
     for (const cmd of cmds) {
       const result = reduce(state, cmd, defaultConfig);
@@ -97,6 +100,7 @@ describe("shopping flow", () => {
     let state = createInitialGame(config, 0, [
       { name: "A", isAI: false, goals: { wealth: 50, happiness: 50, education: 50, career: 50 } },
     ]);
+    resetToFreshTurn(state, config, 0);
     state.players[0].cash = 5000; // override $200 initial; computerSocket costs $1,599
     const allEvents: GameEvent[] = [];
 
@@ -179,6 +183,7 @@ describe("education flow", () => {
     let state = createInitialGame(testConfig, 7, [
       { name: "Solo", isAI: false, goals: { wealth: 100, happiness: 100, education: 100, career: 100 } },
     ]);
+    resetToFreshTurn(state, testConfig, 7);
     const allEvents: GameEvent[] = [];
     for (const cmd of cmds) {
       const result = reduce(state, cmd, testConfig);

@@ -15,6 +15,22 @@ function soloGame(): GameState {
   ]);
 }
 
+describe("createInitialGame seat-0 first-turn parity (bug fix)", () => {
+  it("applies start-of-turn food/health processing to seat 0 at creation, same as advanceTurn does for every other seat's first turn", () => {
+    const g = createInitialGame(testConfig, 1, [
+      { name: "A", isAI: false, goals: { wealth: 100, happiness: 100, education: 100, career: 100 } },
+      { name: "B", isAI: true, goals: { wealth: 100, happiness: 100, education: 100, career: 100 } },
+    ]);
+    const p0 = g.players[0];
+    // Neither player starts with any food, so seat 0 must starve immediately at
+    // creation — exactly like seat 1 will when it becomes "upNext" on its own
+    // first turn via advanceTurn. Bounds (not exact equality) because a Doctor
+    // Visit roll can add further loss on top of the guaranteed starvation hit.
+    expect(p0.hoursRemaining).toBeLessThanOrEqual(testConfig.constants.hoursPerTurn - testConfig.constants.starvationHoursLost);
+    expect(p0.happiness).toBeLessThanOrEqual(-2);
+  });
+});
+
 describe("happyGroupsThisTurn reset (bug fix)", () => {
   it("resets to empty every start-of-week so a happiness-group item can grant its bonus again next turn", () => {
     const g = soloGame();
@@ -153,6 +169,10 @@ describe("Starvation", () => {
     const p = g.players[0];
     p.happiness = 10;
     p.cash = 0;
+    // createInitialGame now runs applyFoodAndHealth once for seat 0 at
+    // creation (bug fix: every other seat already got this on its own first
+    // turn); reset to a clean baseline before this test's own manual call.
+    p.hoursRemaining = testConfig.constants.hoursPerTurn;
     const events: GameEvent[] = [];
     applyFoodAndHealth(p, g, testConfig, events);
     expect(p.hoursRemaining).toBe(40);
@@ -166,6 +186,8 @@ describe("Starvation", () => {
     p.happiness = 10;
     p.cash = 0;
     p.fastFood = 1;
+    // See "loses 20 hours..." above for why this reset is needed.
+    p.hoursRemaining = testConfig.constants.hoursPerTurn;
     const events: GameEvent[] = [];
     applyFoodAndHealth(p, g, testConfig, events);
     expect(p.hoursRemaining).toBe(60);
@@ -181,6 +203,8 @@ describe("Starvation", () => {
     p.cash = 0;
     p.freshFood = 2;
     p.durables = [{ itemId: "refrigeratorZMart", pricePaid: 650 }];
+    // See "loses 20 hours..." above for why this reset is needed.
+    p.hoursRemaining = testConfig.constants.hoursPerTurn;
     const events: GameEvent[] = [];
     applyFoodAndHealth(p, g, testConfig, events);
     expect(p.hoursRemaining).toBe(60);
@@ -268,6 +292,9 @@ describe("Relax command", () => {
     g.players[0].locationId = g.players[0].apartmentId;
     g.players[0].insideBuilding = true;
     g.players[0].relaxation = 10;
+    // See "loses 20 hours..." in the Starvation block above for why this
+    // reset is needed.
+    g.players[0].hoursRemaining = testConfig.constants.hoursPerTurn;
     const { state, events } = reduce(g, { type: "Relax" }, testConfig);
     expect(state.players[0].relaxation).toBe(13);
     expect(state.players[0].hoursRemaining).toBe(54);

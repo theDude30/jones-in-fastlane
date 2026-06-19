@@ -3,6 +3,7 @@ import { defaultConfig, constantEconomyConfig } from "@jones/config";
 import { createInitialGame } from "../src/setup.js";
 import { reduce } from "../src/reduce.js";
 import type { GameState } from "../src/types.js";
+import { resetToFreshTurn } from "./testHelpers.js";
 
 const testConfig = { ...defaultConfig, economy: constantEconomyConfig };
 
@@ -10,6 +11,7 @@ function shopGame(locationId: string, cash = 5000): GameState {
   const state = createInitialGame(testConfig, 0, [
     { name: "A", isAI: false, goals: { wealth: 50, happiness: 50, education: 50, career: 50 } },
   ]);
+  resetToFreshTurn(state, testConfig, 0);
   state.players[0].locationId = locationId;
   state.players[0].insideBuilding = true;
   state.players[0].cash = cash;

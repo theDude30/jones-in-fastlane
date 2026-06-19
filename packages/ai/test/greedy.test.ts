@@ -7,7 +7,22 @@ import { GreedyPlanner } from "../src/greedy.js";
 const HARD = aiDifficulty.hard; // greedy, epsilon 0
 
 function solo(goals = { wealth: 100, happiness: 100, education: 100, career: 100 }): GameState {
-  return createInitialGame(defaultConfig, 1, [{ name: "A", isAI: true, goals }]);
+  const g = createInitialGame(defaultConfig, 1, [{ name: "A", isAI: true, goals }]);
+  // createInitialGame now runs one start-of-turn pass (decay, food/health) on
+  // seat 0 at creation (bug fix: every other seat already got this on its own
+  // first turn) — an unfed fresh player loses hours/happiness immediately.
+  // Reset to a clean baseline so this file's planner-decision tests aren't
+  // coupled to that.
+  const c = defaultConfig.constants;
+  const p = g.players[0];
+  p.hoursRemaining = c.hoursPerTurn;
+  p.happiness = 0;
+  p.cash = c.initialCash;
+  p.relaxation = c.initialRelaxation;
+  p.dependibility = c.initialDependibility;
+  p.clothing = { casual: c.initialCasualWeeks, dress: 0, business: 0 };
+  g.rng = { seed: 1 };
+  return g;
 }
 
 describe("GreedyPlanner", () => {

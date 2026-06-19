@@ -4,6 +4,7 @@ import { createInitialGame } from "../src/setup.js";
 import { reduce } from "../src/reduce.js";
 import { nextInt } from "../src/rng.js";
 import type { GameState } from "../src/types.js";
+import { resetToFreshTurn } from "./testHelpers.js";
 
 const testConfig = { ...defaultConfig, economy: constantEconomyConfig };
 
@@ -12,6 +13,7 @@ function applyJobGame(): GameState {
   const g = createInitialGame(testConfig, 1, [
     { name: "A", isAI: false, goals: { wealth: 10, happiness: 10, education: 10, career: 10 } },
   ]);
+  resetToFreshTurn(g, testConfig, 1);
   g.players[0].locationId = "employmentOffice";
   g.players[0].insideBuilding = true;
   return g;
