@@ -40,6 +40,9 @@ importers:
 
   packages/game:
     dependencies:
+      '@jones/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@jones/config':
         specifier: workspace:*
         version: link:../config

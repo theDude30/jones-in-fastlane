@@ -5,7 +5,7 @@ export function NewGameScreen() {
   return (
     <div>
       <h1>Jones in the Fast Lane</h1>
-      <button onClick={startGame}>New Game</button>
+      <button onClick={() => startGame()}>New Game</button>
     </div>
   );
 }
