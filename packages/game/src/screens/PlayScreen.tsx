@@ -24,6 +24,7 @@ export function PlayScreen() {
         </div>
       )}
       <section>
+        <p>Player: {player.name}</p>
         <p>Week: {state.week}</p>
         <p>Cash: {player.cash}</p>
         <p>Location: {player.locationId}</p>
