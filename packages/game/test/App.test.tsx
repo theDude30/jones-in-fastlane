@@ -26,10 +26,14 @@ describe("App", () => {
     expect(screen.getByText(/Week: 2/)).toBeInTheDocument();
   });
 
-  it("renders an InvalidAction event inline instead of crashing", () => {
+  it("renders an error event inline instead of crashing", () => {
     render(<App />);
     fireEvent.click(screen.getByText("New Game"));
-    fireEvent.click(screen.getByText("Work")); // illegal: outside, no job yet
-    expect(screen.getByText(/InvalidAction/)).toBeInTheDocument();
+    useGameStore.setState((s) => {
+      s.state!.players[0].hoursRemaining = 0;
+      return { state: s.state };
+    });
+    fireEvent.click(screen.getByText("Enter Building")); // illegal: not enough hours
+    expect(screen.getByText(/NotEnoughTime/)).toBeInTheDocument();
   });
 });
