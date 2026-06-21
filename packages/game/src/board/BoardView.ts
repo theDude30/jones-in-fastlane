@@ -31,6 +31,8 @@ export class BoardView {
   private rect: BoardRect = { boardWidth: 0, boardHeight: 0, offsetX: 0, offsetY: 0 };
   private lastState: GameState | null = null;
   private animatingPlayerId: string | null = null;
+  private activeTick: ((ticker: Ticker) => void) | null = null;
+  private activeAnimationToken: Graphics | null = null;
 
   constructor(stage: Container, private onLocationClick: (locationId: string) => void) {
     stage.addChild(this.pathLayer);
@@ -74,6 +76,7 @@ export class BoardView {
     toLocationId: string,
     onComplete: () => void,
   ): void {
+    this.cancelActiveAnimation();
     this.animatingPlayerId = playerId;
     const seatIndex = Number(playerId.slice(1));
     const from = toPixelPosition(boardLayout[fromLocationId], this.rect);
@@ -95,22 +98,35 @@ export class BoardView {
       const t = Math.min(1, elapsed / TRAVEL_DURATION_MS);
       token.position.set(from.x + (to.x - from.x) * t, tokenY(from.y + (to.y - from.y) * t));
       if (t >= 1) {
-        Ticker.shared.remove(tick);
-        this.animationLayer.removeChild(token);
-        token.destroy();
-        this.animatingPlayerId = null;
+        this.cancelActiveAnimation();
         if (this.lastState) this.drawTokens(this.lastState);
         onComplete();
       }
     };
+    this.activeAnimationToken = token;
+    this.activeTick = tick;
     Ticker.shared.add(tick);
   }
 
   destroy(): void {
+    this.cancelActiveAnimation();
     this.pathLayer.destroy();
     this.buildingsLayer.destroy({ children: true });
     this.tokensLayer.destroy({ children: true });
     this.animationLayer.destroy({ children: true });
+  }
+
+  private cancelActiveAnimation(): void {
+    if (this.activeTick) {
+      Ticker.shared.remove(this.activeTick);
+      this.activeTick = null;
+    }
+    if (this.activeAnimationToken) {
+      this.animationLayer.removeChild(this.activeAnimationToken);
+      this.activeAnimationToken.destroy();
+      this.activeAnimationToken = null;
+    }
+    this.animatingPlayerId = null;
   }
 
   private drawPath(): void {
