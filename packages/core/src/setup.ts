@@ -63,6 +63,7 @@ export function createInitialGame(
     rentExtensionsApproved: 0,
     everInRentDebt: false,
     rentExtensionUsedThisTurn: false,
+    weeksWithoutClothes: 0,
   }));
   const state: GameState = {
     week: 1,

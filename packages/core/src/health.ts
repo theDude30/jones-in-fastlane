@@ -1,10 +1,33 @@
-import type { DurableType, GameConfig } from "@jones/config";
+import type { DurableType, GameConfig, StockId } from "@jones/config";
 import type { GameEvent, GameState, PlayerState } from "./types.js";
 import { nextFloat, nextInt } from "./rng.js";
+import { bestUniform, findJob } from "./work.js";
 
 /** True if the player owns any durable of the given type (any store variant). */
 export function ownsDurableType(p: PlayerState, config: GameConfig, durableType: DurableType): boolean {
   return p.durables.some((d) => config.items.find((i) => i.id === d.itemId)?.durableType === durableType);
+}
+
+/**
+ * §4 Net Worth — used only for Donation eligibility. Liquid Assets (cash +
+ * bank + current stock value) plus the value of every durable the player
+ * holds, whether currently owned or currently pawned. Sums every holding's
+ * own recorded pricePaid directly rather than grouping by durableType and
+ * using only the "last unit's" price — the data model has no
+ * acquisition-order timestamp on `durables` to determine "last," and in
+ * the normal case (at most one item per durableType at a time) the two
+ * formulas are identical.
+ */
+export function netWorth(p: PlayerState, state: GameState): number {
+  const stockValue = (Object.keys(p.stocks) as StockId[]).reduce(
+    (sum, id) => sum + p.stocks[id] * state.stockPrices[id],
+    0,
+  );
+  const ownedDurableValue = p.durables.reduce((sum, d) => sum + d.pricePaid, 0);
+  const pawnedDurableValue = state.pawnedItems
+    .filter((pi) => pi.pawnedByPlayerId === p.id)
+    .reduce((sum, pi) => sum + pi.pricePaid, 0);
+  return p.cash + p.bank + stockValue + ownedDurableValue + pawnedDurableValue;
 }
 
 /**
@@ -105,6 +128,46 @@ export function applyFoodAndHealth(
       cost,
     });
   }
+}
+
+/**
+ * §2 step 17 / §12 Donation: a player with no clothing at all for 2+
+ * consecutive turns, cash under $300, and Net Worth under $300 receives a
+ * cash grant — enough for their job's required uniform (or $50 flat if
+ * unemployed) plus a random $1-100. The counter resets to 0 whenever the
+ * player has any clothing, or immediately after a donation.
+ */
+export function applyDonation(
+  p: PlayerState,
+  state: GameState,
+  config: GameConfig,
+  events: GameEvent[],
+): void {
+  if (bestUniform(p) !== null) {
+    p.weeksWithoutClothes = 0;
+    return;
+  }
+  p.weeksWithoutClothes += 1;
+  if (p.weeksWithoutClothes < 2) return;
+  if (p.cash >= 300 || netWorth(p, state) >= 300) return;
+
+  let base: number;
+  if (p.jobId === null) {
+    base = 50;
+  } else {
+    const job = findJob(config, p.jobId);
+    const candidates = config.items
+      .filter((it) => it.clothingCategory === job.uniform)
+      .sort((a, b) => a.basePrice - b.basePrice);
+    base = candidates[0]?.basePrice ?? 50;
+  }
+
+  const roll = nextInt(state.rng, 1, 100);
+  state.rng = roll.state;
+  const amount = base + roll.value;
+  p.cash += amount;
+  p.weeksWithoutClothes = 0;
+  events.push({ type: "DonationReceived", playerId: p.id, amount });
 }
 
 /** §2 Relax — only at the player's own apartment; restores Relaxation, first-per-turn happiness. */

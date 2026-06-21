@@ -57,6 +57,7 @@ export interface PlayerState {
   rentExtensionsApproved: number;
   everInRentDebt: boolean;
   rentExtensionUsedThisTurn: boolean;
+  weeksWithoutClothes: number;
 }
 
 export type GameStatus = "playing" | "ended";
@@ -159,7 +160,8 @@ export type GameEvent =
   | { type: "FoodSpoiled"; playerId: string; excess?: number }
   | { type: "PlayerStarved"; playerId: string; hoursLost: number }
   | { type: "DoctorVisited"; playerId: string; hoursLost: number; happinessCost: number; cost: number }
-  | { type: "Relaxed"; playerId: string; relaxation: number; happinessGained: number };
+  | { type: "Relaxed"; playerId: string; relaxation: number; happinessGained: number }
+  | { type: "DonationReceived"; playerId: string; amount: number };
 
 export interface ReduceResult {
   state: GameState;
