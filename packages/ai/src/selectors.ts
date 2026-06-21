@@ -86,6 +86,30 @@ export function legalCommands(state: GameState, playerId: string, config: GameCo
       const price = item.fixedPrice ? item.basePrice : economy.adjustedPrice(item.basePrice, state.economy.reading);
       if (canAfford(p, price)) cmds.push({ type: "BuyItem", itemId: item.id });
     }
+
+    // OpenBroker: at the bank, not already open.
+    if (atLocation(p, "bank") && !p.brokerMenuOpen) {
+      cmds.push({ type: "OpenBroker" });
+    }
+
+    // SellStock / SellTBill: broker open, asset owned.
+    if (p.brokerMenuOpen) {
+      for (const stock of config.stocks) {
+        if (p.stocks[stock.id] > 0) cmds.push({ type: "SellStock", stockId: stock.id });
+      }
+      if (p.tBills > 0) cmds.push({ type: "SellTBill" });
+    }
+
+    // PawnItem: at the pawn shop, for each owned durable whose type isn't
+    // already pawned (pawnedItems is shared state-wide, not per-player).
+    if (atLocation(p, "pawnShop")) {
+      for (const d of p.durables) {
+        const durableType = config.items.find((i) => i.id === d.itemId)?.durableType;
+        if (durableType === undefined) continue;
+        const alreadyPawned = state.pawnedItems.some((pi) => pi.durableType === durableType);
+        if (!alreadyPawned) cmds.push({ type: "PawnItem", itemId: d.itemId });
+      }
+    }
   } else {
     if (hasHours(p, ac.enterLocation)) cmds.push({ type: "EnterBuilding" });
     for (const loc of config.locations) {
