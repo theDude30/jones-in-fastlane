@@ -111,4 +111,61 @@ describe("GreedyPlanner", () => {
     const s = solo();
     for (let i = 0; i < 20; i++) expect(a.nextCommand(s, "p0")).toEqual(b.nextCommand(s, "p0"));
   });
+
+  it("pawns an owned durable as a last resort when no goal activity is available", () => {
+    const s = solo({ wealth: 0, happiness: 0, education: 1, career: 0 }); // all goals already met
+    const p = s.players[0];
+    p.locationId = "pawnShop";
+    p.insideBuilding = true;
+    p.durables = [{ itemId: "refrigeratorSocket", pricePaid: 876 }];
+    const planner = new GreedyPlanner(5, HARD, defaultConfig);
+    expect(planner.nextCommand(s, "p0")).toEqual({ type: "PawnItem", itemId: "refrigeratorSocket" });
+  });
+
+  it("navigates to the pawn shop first when not yet there", () => {
+    const s = solo({ wealth: 0, happiness: 0, education: 1, career: 0 });
+    const p = s.players[0];
+    p.durables = [{ itemId: "refrigeratorSocket", pricePaid: 876 }];
+    // p starts at lowCostHousing, outside.
+    const planner = new GreedyPlanner(5, HARD, defaultConfig);
+    expect(planner.nextCommand(s, "p0")).toEqual({ type: "TravelTo", locationId: "pawnShop" });
+  });
+
+  it("sells a T-bill when there's nothing to pawn", () => {
+    const s = solo({ wealth: 0, happiness: 0, education: 1, career: 0 });
+    const p = s.players[0];
+    p.locationId = "bank";
+    p.insideBuilding = true;
+    p.brokerMenuOpen = true;
+    p.tBills = 2;
+    const planner = new GreedyPlanner(5, HARD, defaultConfig);
+    expect(planner.nextCommand(s, "p0")).toEqual({ type: "SellTBill" });
+  });
+
+  it("sells a stock when there's nothing to pawn and no T-bills", () => {
+    const s = solo({ wealth: 0, happiness: 0, education: 1, career: 0 });
+    const p = s.players[0];
+    p.locationId = "bank";
+    p.insideBuilding = true;
+    p.brokerMenuOpen = true;
+    p.stocks.gold = 3;
+    const planner = new GreedyPlanner(5, HARD, defaultConfig);
+    expect(planner.nextCommand(s, "p0")).toEqual({ type: "SellStock", stockId: "gold" });
+  });
+
+  it("opens the broker first when it owns a T-bill but the broker isn't open yet", () => {
+    const s = solo({ wealth: 0, happiness: 0, education: 1, career: 0 });
+    const p = s.players[0];
+    p.locationId = "bank";
+    p.insideBuilding = true;
+    p.tBills = 1;
+    const planner = new GreedyPlanner(5, HARD, defaultConfig);
+    expect(planner.nextCommand(s, "p0")).toEqual({ type: "OpenBroker" });
+  });
+
+  it("still ends the turn when there is truly nothing left to liquidate", () => {
+    const s = solo({ wealth: 0, happiness: 0, education: 1, career: 0 }); // all goals met, no assets
+    const planner = new GreedyPlanner(5, HARD, defaultConfig);
+    expect(planner.nextCommand(s, "p0")).toEqual({ type: "EndTurn" });
+  });
 });
