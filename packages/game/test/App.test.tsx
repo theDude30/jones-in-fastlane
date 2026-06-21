@@ -1,7 +1,11 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { App } from "../src/App.js";
 import { useGameStore } from "../src/store/gameStore.js";
+
+vi.mock("../src/screens/PixiBoard.js", () => ({
+  PixiBoard: () => null,
+}));
 
 afterEach(() => {
   useGameStore.setState({ state: null, lastEvents: [], seats: [] });
@@ -33,7 +37,15 @@ describe("App", () => {
       s.state!.players[0].hoursRemaining = 0;
       return { state: s.state };
     });
-    fireEvent.click(screen.getByText("Enter Building")); // illegal: not enough hours
+    // Board clicks can't be simulated through RTL (Pixi renders to a canvas,
+    // not DOM text nodes) — dispatch the illegal command directly, exactly
+    // as a real board click would, to prove the error path still renders
+    // inline instead of crashing. Wrapped in act() because this dispatch
+    // happens outside of an RTL-triggered event, so React won't otherwise
+    // flush the resulting state update before the assertion runs.
+    act(() => {
+      useGameStore.getState().dispatch({ type: "EnterBuilding" });
+    });
     expect(screen.getByText(/NotEnoughTime/)).toBeInTheDocument();
   });
 });
