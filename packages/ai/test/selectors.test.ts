@@ -162,4 +162,60 @@ describe("legalCommands", () => {
     const cmds = legalCommands(s, "p0", defaultConfig);
     expect(cmds.some((c) => c.type === "BuyItem" && c.itemId === "refrigeratorZMart")).toBe(false);
   });
+
+  it("offers OpenBroker at the bank when the broker isn't open, not when it already is", () => {
+    const s = solo();
+    s.players[0].locationId = "bank";
+    s.players[0].insideBuilding = true;
+    let cmds = legalCommands(s, "p0", defaultConfig);
+    expect(cmds.some((c) => c.type === "OpenBroker")).toBe(true);
+
+    s.players[0].brokerMenuOpen = true;
+    cmds = legalCommands(s, "p0", defaultConfig);
+    expect(cmds.some((c) => c.type === "OpenBroker")).toBe(false);
+  });
+
+  it("offers SellStock/SellTBill only when the broker is open and the asset is owned", () => {
+    const s = solo();
+    s.players[0].locationId = "bank";
+    s.players[0].insideBuilding = true;
+    s.players[0].brokerMenuOpen = true;
+    s.players[0].stocks.gold = 2;
+    s.players[0].tBills = 1;
+    const cmds = legalCommands(s, "p0", defaultConfig);
+    expect(cmds.some((c) => c.type === "SellStock" && c.stockId === "gold")).toBe(true);
+    expect(cmds.some((c) => c.type === "SellTBill")).toBe(true);
+  });
+
+  it("excludes SellStock/SellTBill when the broker isn't open", () => {
+    const s = solo();
+    s.players[0].locationId = "bank";
+    s.players[0].insideBuilding = true;
+    s.players[0].stocks.gold = 2;
+    s.players[0].tBills = 1;
+    const cmds = legalCommands(s, "p0", defaultConfig);
+    expect(cmds.some((c) => c.type === "SellStock")).toBe(false);
+    expect(cmds.some((c) => c.type === "SellTBill")).toBe(false);
+  });
+
+  it("offers PawnItem for an owned durable whose type isn't already pawned", () => {
+    const s = solo();
+    s.players[0].locationId = "pawnShop";
+    s.players[0].insideBuilding = true;
+    s.players[0].durables = [{ itemId: "refrigeratorSocket", pricePaid: 876 }];
+    const cmds = legalCommands(s, "p0", defaultConfig);
+    expect(cmds.some((c) => c.type === "PawnItem" && c.itemId === "refrigeratorSocket")).toBe(true);
+  });
+
+  it("excludes PawnItem when that durable type is already pawned state-wide", () => {
+    const s = solo();
+    s.players[0].locationId = "pawnShop";
+    s.players[0].insideBuilding = true;
+    s.players[0].durables = [{ itemId: "refrigeratorSocket", pricePaid: 876 }];
+    s.pawnedItems = [
+      { itemId: "refrigeratorZMart", durableType: "refrigerator", pricePaid: 650, pawnedByPlayerId: "p1", pawnedWeek: 1 },
+    ];
+    const cmds = legalCommands(s, "p0", defaultConfig);
+    expect(cmds.some((c) => c.type === "PawnItem")).toBe(false);
+  });
 });

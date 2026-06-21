@@ -41,6 +41,10 @@ export class GreedyPlanner implements Agent {
       const cmd = this.activity(goal, p, state);
       if (cmd) return cmd;
     }
+    // Last resort: nothing goal-driven is actionable — try to raise
+    // emergency cash before giving up on the turn entirely.
+    const liquidity = this.emergencyLiquidity(p, state);
+    if (liquidity) return liquidity;
     return { type: "EndTurn" };
   }
 
@@ -162,5 +166,43 @@ export class GreedyPlanner implements Agent {
       return { type: "EnterBuilding" };
     }
     return null; // already at location and inside
+  }
+
+  /**
+   * Last resort, tried only when no goal-pursuing activity returned a
+   * command: raise emergency cash by pawning a durable, else selling a
+   * T-bill, else selling a stock. Returns null when there's truly nothing
+   * left to liquidate.
+   */
+  private emergencyLiquidity(p: PlayerState, state: GameState): Command | null {
+    const pawnable = p.durables.find((d) => {
+      const durableType = this.config.items.find((i) => i.id === d.itemId)?.durableType;
+      return durableType !== undefined && !state.pawnedItems.some((pi) => pi.durableType === durableType);
+    });
+    if (pawnable) {
+      const nav = this.navigateInto(p, "pawnShop");
+      if (nav) return nav;
+      if (!atLocation(p, "pawnShop") || !isInside(p)) return null;
+      return { type: "PawnItem", itemId: pawnable.itemId };
+    }
+
+    if (p.tBills > 0) {
+      const nav = this.navigateInto(p, "bank");
+      if (nav) return nav;
+      if (!atLocation(p, "bank") || !isInside(p)) return null;
+      if (!p.brokerMenuOpen) return { type: "OpenBroker" };
+      return { type: "SellTBill" };
+    }
+
+    const ownedStock = this.config.stocks.find((s) => p.stocks[s.id] > 0);
+    if (ownedStock) {
+      const nav = this.navigateInto(p, "bank");
+      if (nav) return nav;
+      if (!atLocation(p, "bank") || !isInside(p)) return null;
+      if (!p.brokerMenuOpen) return { type: "OpenBroker" };
+      return { type: "SellStock", stockId: ownedStock.id };
+    }
+
+    return null;
   }
 }

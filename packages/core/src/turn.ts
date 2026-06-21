@@ -2,7 +2,7 @@ import type { GameConfig } from "@jones/config";
 import type { GameEvent, GameState, PlayerState } from "./types.js";
 import type { Economy } from "./economy.js";
 import { hasWon } from "./goals.js";
-import { applyFoodAndHealth, ownsDurableType } from "./health.js";
+import { applyDonation, applyFoodAndHealth, ownsDurableType } from "./health.js";
 
 export function applyStartOfWeek(p: PlayerState, config: GameConfig): void {
   p.happyGroupsThisTurn = [];
@@ -112,5 +112,6 @@ export function advanceTurn(
   } else {
     applyDueDates(upNext, state, config, events);
     applyFoodAndHealth(upNext, state, config, events);
+    applyDonation(upNext, state, config, events);
   }
 }

@@ -1,7 +1,7 @@
 import type { GameConfig, StockId } from "@jones/config";
 import type { GameEvent, GameState, GoalTargets, PlayerState } from "./types.js";
 import { applyStartOfWeek, applyDueDates } from "./turn.js";
-import { applyFoodAndHealth } from "./health.js";
+import { applyDonation, applyFoodAndHealth } from "./health.js";
 import { hasWon } from "./goals.js";
 
 export interface PlayerSetup {
@@ -63,6 +63,7 @@ export function createInitialGame(
     rentExtensionsApproved: 0,
     everInRentDebt: false,
     rentExtensionUsedThisTurn: false,
+    weeksWithoutClothes: 0,
   }));
   const state: GameState = {
     week: 1,
@@ -93,6 +94,7 @@ export function createInitialGame(
   } else {
     applyDueDates(first, state, config, discardedEvents);
     applyFoodAndHealth(first, state, config, discardedEvents);
+    applyDonation(first, state, config, discardedEvents);
   }
 
   return state;
