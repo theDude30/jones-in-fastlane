@@ -58,21 +58,28 @@ describe("AI full-game integration", () => {
     // previously drove the AI to $0 cash by week 6, after which lapsed
     // clothing made Work permanently unaffordable to restore, and happiness
     // declined monotonically to roughly -397 by week 200 with no recovery.
+    // Fixed by @jones/ai's emergency-liquidity fallback (pawn/sell assets)
+    // plus @jones/core's Donation safety net (for when there's nothing to
+    // liquidate at all, which is exactly what happens on this seed).
     const seat = { playerId: "p0", agent: makeAgent(aiDifficulty.medium, config, 42, 0) };
     let state = newGame(42);
     const allEvents: GameEvent[] = [];
+    let wasBroke = false;
     let recovered = false;
 
     for (let w = 0; w < 200 && state.status === "playing"; w++) {
       const r = playGame(config, state, [seat], { maxWeeks: state.week + 1 });
       state = r.state;
       allEvents.push(...r.events);
-      if (state.players[0].cash > 0) {
+      if (state.players[0].cash <= 0) {
+        wasBroke = true;
+      } else if (wasBroke) {
         recovered = true;
         break;
       }
     }
 
+    expect(wasBroke).toBe(true);
     expect(recovered).toBe(true);
     expect(invalidCount(allEvents)).toBeLessThan(5);
   });
