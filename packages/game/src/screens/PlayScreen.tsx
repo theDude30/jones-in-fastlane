@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useGameStore } from "../store/gameStore.js";
 import { LocationScreen } from "./LocationScreen.js";
-import type { Command } from "@jones/core";
+import { PixiBoard } from "./PixiBoard.js";
 
 export function PlayScreen() {
-  const config = useGameStore((s) => s.config);
   const state = useGameStore((s) => s.state);
   const lastEvents = useGameStore((s) => s.lastEvents);
   const dispatch = useGameStore((s) => s.dispatch);
@@ -13,7 +12,6 @@ export function PlayScreen() {
   if (!state) return null;
 
   const player = state.players[state.currentPlayerIndex];
-  const fire = (command: Command) => dispatch(command);
 
   return (
     <div>
@@ -23,6 +21,7 @@ export function PlayScreen() {
           {state.winners.length > 0 && ` — winner: ${state.winners.join(", ")}`}
         </div>
       )}
+      <PixiBoard />
       <section>
         <p>Player: {player.name}</p>
         <p>Week: {state.week}</p>
@@ -31,23 +30,13 @@ export function PlayScreen() {
         <p>Inside: {player.insideBuilding ? "yes" : "no"}</p>
         <p>Hours remaining: {player.hoursRemaining}</p>
       </section>
-      {player.insideBuilding ? (
+      {player.insideBuilding && (
         <section>
-          <button onClick={() => fire({ type: "ExitBuilding" })}>Exit Building</button>
           <LocationScreen />
-        </section>
-      ) : (
-        <section>
-          {config.locations.map((loc) => (
-            <button key={loc.id} onClick={() => fire({ type: "TravelTo", locationId: loc.id })}>
-              Travel to {loc.name}
-            </button>
-          ))}
-          <button onClick={() => fire({ type: "EnterBuilding" })}>Enter Building</button>
         </section>
       )}
       <section>
-        <button onClick={() => fire({ type: "EndTurn" })}>End Turn</button>
+        <button onClick={() => dispatch({ type: "EndTurn" })}>End Turn</button>
       </section>
       <section>
         <h2>Last events</h2>
