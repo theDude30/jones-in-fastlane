@@ -368,3 +368,14 @@ describe("Food & Health integration", () => {
     expect(state.players[0].happiness).toBeLessThan(startingHappiness);
   });
 });
+
+describe("Donation wiring via EndTurn (bug fix follow-up)", () => {
+  it("fires DonationReceived after 2 consecutive turns without clothing, when broke", () => {
+    const g = soloGame();
+    g.players[0].clothing = { casual: 0, dress: 0, business: 0 };
+    const { state: s1 } = reduce(g, { type: "EndTurn" }, testConfig);
+    expect(s1.players[0].weeksWithoutClothes).toBe(1);
+    const { events } = reduce(s1, { type: "EndTurn" }, testConfig);
+    expect(events.some((e) => e.type === "DonationReceived")).toBe(true);
+  });
+});
