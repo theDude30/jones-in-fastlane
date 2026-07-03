@@ -40,4 +40,5 @@ export const constants: GameConstants = {
   freshFoodFreezerBonus: 6,
   starvationHoursLost: 20,
   doctorHoursLost: 10,
+  maxWeeks: 156,
 };

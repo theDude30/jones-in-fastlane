@@ -82,6 +82,7 @@ export interface GameConstants {
   freshFoodFreezerBonus: number;   // 6  §11 — +6 capacity (total 12) if a Freezer is also owned
   starvationHoursLost: number;     // 20 §12 — Starvation start-of-turn Hours penalty
   doctorHoursLost: number;         // 10 §12 — Doctor Visit start-of-turn Hours penalty
+  maxWeeks: number;                // 156 §3 — timed-game cap; game ends by time once week > maxWeeks. <= 0 disables the cap.
 }
 
 export interface GameConfig {
