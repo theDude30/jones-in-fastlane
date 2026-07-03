@@ -65,6 +65,10 @@ export function advanceTurn(
   events: GameEvent[],
   economy: Economy,
 ): void {
+  // If the game already ended (e.g. a prior cap or hasWon turn), advancing
+  // again is a no-op — never re-run the economy or push a second winner.
+  if (state.status === "ended") return;
+
   const wasLast = state.currentPlayerIndex === state.players.length - 1;
   state.currentPlayerIndex = wasLast ? 0 : state.currentPlayerIndex + 1;
 

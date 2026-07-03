@@ -102,6 +102,29 @@ describe("maxWeeks timed-game cap", () => {
     expect(state.winners).toContain("p0");
   });
 
+  it("re-entering advanceTurn on an ended game is a no-op (no second winner, no week mutation)", () => {
+    let g = cappedTwoPlayerGame();
+    g.players[0].happiness = 8;  // ahead — same setup as the first cap test
+    g.players[1].happiness = 1;
+    for (let i = 0; i < 8 && g.status === "playing"; i++) {
+      g = reduce(g, { type: "EndTurn" }, cappedConfig).state;
+    }
+    expect(g.status).toBe("ended");
+    const weekAtEnd = g.week;
+    const winnersAtEnd = [...g.winners];
+    expect(winnersAtEnd).toHaveLength(1);
+
+    // Re-enter on the already-ended game.
+    const { state: reState, events: reEvents } = reduce(g, { type: "EndTurn" }, cappedConfig);
+
+    expect(reState.status).toBe("ended");
+    expect(reState.week).toBe(weekAtEnd);
+    expect(reState.winners).toHaveLength(1);
+    expect(reState.winners[0]).toBe(winnersAtEnd[0]);
+    expect(reEvents.some((e) => e.type === "GameEndedByTime")).toBe(false);
+    expect(reEvents.some((e) => e.type === "WeekAdvanced")).toBe(false);
+  });
+
   it("maxWeeks <= 0 disables the cap (stays playing past 156 weeks with no winner)", () => {
     const noCapConfig = { ...defaultConfig, constants: { ...constants, maxWeeks: 0 } };
     let g = createInitialGame(noCapConfig, 1, [
