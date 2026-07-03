@@ -83,4 +83,19 @@ describe("AI full-game integration", () => {
     expect(recovered).toBe(true);
     expect(invalidCount(allEvents)).toBeLessThan(5);
   });
+
+  it("always terminates with exactly one winner under a small core cap (multiple seeds)", () => {
+    // Override the core cap low so games end quickly; give the runner a
+    // larger maxWeeks so the CORE cap is what terminates, not the runner.
+    const capped = { ...config, constants: { ...config.constants, maxWeeks: 10 } };
+    for (const seed of [1, 2, 3, 42, 99]) {
+      const seat = { playerId: "p0", agent: makeAgent(aiDifficulty.hard, capped, seed, 0) };
+      const result = playGame(capped, createInitialGame(capped, seed, [
+        { name: "AI", isAI: true, goals: { wealth: 30, happiness: 30, education: 19, career: 30 } },
+      ]), [seat], { maxWeeks: 100 });
+      expect(result.state.status).toBe("ended");
+      expect(result.state.winners).toHaveLength(1);
+      expect(result.state.week).toBeLessThanOrEqual(11); // cap 10 -> ends when week becomes 11
+    }
+  });
 });
