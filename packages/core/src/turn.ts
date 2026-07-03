@@ -1,7 +1,7 @@
 import type { GameConfig } from "@jones/config";
 import type { GameEvent, GameState, PlayerState } from "./types.js";
 import type { Economy } from "./economy.js";
-import { hasWon } from "./goals.js";
+import { hasWon, leadingPlayer } from "./goals.js";
 import { applyDonation, applyFoodAndHealth, ownsDurableType } from "./health.js";
 
 export function applyStartOfWeek(p: PlayerState, config: GameConfig): void {
@@ -101,6 +101,18 @@ export function advanceTurn(
     }
 
     events.push(...result.events);
+  }
+
+  // Timed-game cap (§3): once the week ticks past maxWeeks with no
+  // goals-based winner yet, end the game and award it on points to the
+  // player with the highest average goal completion. Deterministic
+  // (seat-order tiebreak, no RNG). Disabled when maxWeeks <= 0.
+  if (config.constants.maxWeeks > 0 && state.week > config.constants.maxWeeks) {
+    const winner = leadingPlayer(state.players);
+    state.winners.push(winner.id);
+    state.status = "ended";
+    events.push({ type: "GameEndedByTime", week: state.week, winnerId: winner.id });
+    return;
   }
 
   const upNext = state.players[state.currentPlayerIndex];

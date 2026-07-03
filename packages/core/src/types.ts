@@ -161,7 +161,8 @@ export type GameEvent =
   | { type: "PlayerStarved"; playerId: string; hoursLost: number }
   | { type: "DoctorVisited"; playerId: string; hoursLost: number; happinessCost: number; cost: number }
   | { type: "Relaxed"; playerId: string; relaxation: number; happinessGained: number }
-  | { type: "DonationReceived"; playerId: string; amount: number };
+  | { type: "DonationReceived"; playerId: string; amount: number }
+  | { type: "GameEndedByTime"; week: number; winnerId: string };
 
 export interface ReduceResult {
   state: GameState;
