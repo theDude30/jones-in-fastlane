@@ -51,12 +51,14 @@ describe("rentRung", () => {
   it("pays rent once due within the pay horizon and cash covers it", () => {
     const s = solo(defaultConfig);
     s.week = 3; // rentDueWeek(4) - week(3) = 1 <= horizon(1)
+    s.players[0].cash = 1000; // initialCash (200) can't cover the $325 rent
     expect(rentRung(ctxFor(s))).toEqual({ type: "TravelTo", locationId: "rentOffice" });
   });
 
   it("pays once at the rent office", () => {
     const s = solo(defaultConfig);
     s.week = 3;
+    s.players[0].cash = 1000;
     s.players[0].locationId = "rentOffice";
     s.players[0].insideBuilding = true;
     expect(rentRung(ctxFor(s))).toEqual({ type: "PayRent" });
