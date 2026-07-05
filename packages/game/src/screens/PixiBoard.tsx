@@ -11,6 +11,11 @@ export function PixiBoard() {
   const dispatch = useGameStore((s) => s.dispatch);
   const stateRef = useRef(state);
   stateRef.current = state;
+  // Last-seen locationId per player, so AI turns (resolved synchronously,
+  // with no per-move dispatch of their own) still get an animated glide to
+  // wherever they ended up, the same as a human's click-triggered travel —
+  // otherwise their token would just silently teleport between turns.
+  const lastLocationsRef = useRef<Record<string, string>>({});
   // Survives across React 18 StrictMode's dev-only mount→unmount→remount of
   // this effect, so the second mount can wait for the first mount's
   // Application to be fully torn down before creating its own. Two
@@ -99,7 +104,21 @@ export function PixiBoard() {
   }, [dispatch]);
 
   useEffect(() => {
-    if (state) boardViewRef.current?.syncState(state);
+    if (!state) return;
+    const boardView = boardViewRef.current;
+    for (const player of state.players) {
+      const prevLocationId = lastLocationsRef.current[player.id];
+      if (
+        boardView &&
+        prevLocationId &&
+        prevLocationId !== player.locationId &&
+        !boardView.isAnimating(player.id)
+      ) {
+        boardView.playTravelAnimation(player.id, prevLocationId, player.locationId, () => {});
+      }
+      lastLocationsRef.current[player.id] = player.locationId;
+    }
+    boardView?.syncState(state);
   }, [state]);
 
   return <div ref={containerRef} style={{ width: "100%", height: 360 }} />;

@@ -58,9 +58,7 @@ export class BoardView {
   private carTexture: Texture | null = null;
   private rect: BoardRect = { boardWidth: 0, boardHeight: 0, offsetX: 0, offsetY: 0 };
   private lastState: GameState | null = null;
-  private animatingPlayerId: string | null = null;
-  private activeTick: ((ticker: Ticker) => void) | null = null;
-  private activeAnimationToken: Sprite | null = null;
+  private activeAnimations = new Map<string, { token: Sprite; tick: (ticker: Ticker) => void }>();
   private destroyed = false;
 
   constructor(stage: Container, private onLocationClick: (locationId: string) => void) {
@@ -137,13 +135,18 @@ export class BoardView {
     this.drawTokens(state);
   }
 
+  /** Whether `playerId` currently has an in-flight travel animation. */
+  isAnimating(playerId: string): boolean {
+    return this.activeAnimations.has(playerId);
+  }
+
   playTravelAnimation(
     playerId: string,
     fromLocationId: string,
     toLocationId: string,
     onComplete: () => void,
   ): void {
-    this.cancelActiveAnimation();
+    this.cancelAnimation(playerId);
     // The car texture loads asynchronously; travel commands already landed
     // in game state by the time this is called, so if the sprite isn't
     // ready yet, skip the visual and still fire the follow-up command.
@@ -151,7 +154,6 @@ export class BoardView {
       onComplete();
       return;
     }
-    this.animatingPlayerId = playerId;
     const scale = this.scale;
     const seatIndex = Number(playerId.slice(1));
     // Animate along the road's actual drawn centerline, not a straight line
@@ -185,19 +187,18 @@ export class BoardView {
       token.position.set(point.x, point.y);
       token.rotation = roadHeadingAt(s, direction, this.rect) - CAR_NOSE_OFFSET;
       if (t >= 1) {
-        this.cancelActiveAnimation();
+        this.cancelAnimation(playerId);
         if (this.lastState) this.drawTokens(this.lastState);
         onComplete();
       }
     };
-    this.activeAnimationToken = token;
-    this.activeTick = tick;
+    this.activeAnimations.set(playerId, { token, tick });
     Ticker.shared.add(tick);
   }
 
   destroy(): void {
     this.destroyed = true;
-    this.cancelActiveAnimation();
+    for (const playerId of [...this.activeAnimations.keys()]) this.cancelAnimation(playerId);
     this.backdropLayer.destroy({ children: true });
     this.buildingsLayer.destroy({ children: true });
     this.tokensLayer.destroy({ children: true });
@@ -205,17 +206,13 @@ export class BoardView {
     this.playerTokens.clear();
   }
 
-  private cancelActiveAnimation(): void {
-    if (this.activeTick) {
-      Ticker.shared.remove(this.activeTick);
-      this.activeTick = null;
-    }
-    if (this.activeAnimationToken) {
-      this.animationLayer.removeChild(this.activeAnimationToken);
-      this.activeAnimationToken.destroy();
-      this.activeAnimationToken = null;
-    }
-    this.animatingPlayerId = null;
+  private cancelAnimation(playerId: string): void {
+    const anim = this.activeAnimations.get(playerId);
+    if (!anim) return;
+    Ticker.shared.remove(anim.tick);
+    this.animationLayer.removeChild(anim.token);
+    anim.token.destroy();
+    this.activeAnimations.delete(playerId);
   }
 
   private drawBuildingCards(state: GameState): void {
@@ -247,7 +244,7 @@ export class BoardView {
     const clusters = clusterPlayersByLocation(state.players);
     const visiblePlayerIds = new Set<string>();
     for (const [locationId, players] of clusters) {
-      const visible = players.filter((p) => p.id !== this.animatingPlayerId);
+      const visible = players.filter((p) => !this.activeAnimations.has(p.id));
       // On the road at this location's stop, not on the building card —
       // matches where playTravelAnimation starts and ends, so there's no
       // visual jump between arriving and coming to rest.
