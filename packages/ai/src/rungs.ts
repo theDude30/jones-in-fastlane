@@ -1,6 +1,6 @@
 import { bestUniform, findJob, meetsUniform, ownsDurableType } from "@jones/core";
 import type { Command, Economy, GameState, PlayerState } from "@jones/core";
-import type { GameConfig, UniformLevel, DurableType } from "@jones/config";
+import type { GameConfig, UniformLevel, DurableType, JobDef } from "@jones/config";
 import { canAfford, hasHours, eligibleJobs, enrollableDegrees } from "./selectors.js";
 import { goBuy, navigateInto } from "./nav.js";
 import { adjustedItemPrice, PLANNER_TUNING, type TurnBudget } from "./budget.js";
@@ -90,21 +90,36 @@ function uniformAffordable(ctx: TurnContext, level: UniformLevel): boolean {
   );
 }
 
+/** Whether the player's current dependibility clears the same -5 firing-avoidance buffer workCommand uses — i.e., working this job right now wouldn't trigger a firing. */
+function canSustain(p: PlayerState, job: JobDef): boolean {
+  return p.dependibility >= job.reqDependibility - 5;
+}
+
 /** Rung 5: hold a job — apply when unemployed, or upgrade to a meaningfully better one. */
 export function employmentRung(ctx: TurnContext): Command | null {
   const { player: p, state, config } = ctx;
 
   if (p.jobId === null) {
-    const jobs = eligibleJobs(p, state, config);
+    const jobs = eligibleJobs(p, state, config).filter((j) => canSustain(p, j));
     if (jobs.length === 0) return null;
     const best = jobs.reduce((a, b) => (b.baseWage > a.baseWage ? b : a));
     return applyForBest(p, config, best.id);
   }
 
   const current = findJob(config, p.jobId);
+
+  // Permanently unworkable at the current dependibility: quit (free, no
+  // location/hours cost) so the next call's unemployed branch can apply
+  // somewhere the player can actually sustain, instead of freezing forever
+  // (can't work — would get fired — and can't re-apply while still employed).
+  if (!canSustain(p, current)) {
+    return { type: "QuitJob" };
+  }
+
   const upgrade = eligibleJobs(p, state, config)
     .filter((j) => j.baseWage >= current.baseWage + PLANNER_TUNING.wageUpgradeThreshold)
     .filter((j) => uniformAffordable(ctx, j.uniform))
+    .filter((j) => canSustain(p, j))
     .sort((a, b) => b.baseWage - a.baseWage)[0];
   if (!upgrade) return null;
   return applyForBest(p, config, upgrade.id);

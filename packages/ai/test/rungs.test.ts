@@ -129,6 +129,41 @@ describe("employmentRung", () => {
     const s = solo(defaultConfig);
     s.players[0].jobId = "factory.generalManager"; // top wage, nothing higher exists
     s.players[0].wage = 25;
+    s.players[0].dependibility = 70; // meets factory.generalManager's own reqDependibility(70), so canSustain holds
+    expect(employmentRung(ctxFor(s))).toBeNull();
+  });
+
+  it("skips an unsustainable high-wage job in favor of one the player can actually work, when unemployed", () => {
+    const s = solo(defaultConfig);
+    s.players[0].dependibility = 12; // below factory.janitor's reqDependibility(20)-5=15, and below every other reqDependibility(20) job's -5 line, but above the reqDependibility(10) jobs' -5=5 line
+    // factory.janitor ($7) would normally win by wage, but canSustain fails (12 < 15), as does every other reqDependibility-20 job.
+    // Among the surviving reqDependibility-10 jobs (zMart.clerk $5, monolithBurgers.cook $5, hiTechU.janitor $5, blacksMarket.janitor $6),
+    // blacksMarket.janitor is the highest-wage one that passes canSustain (12 >= 5).
+    expect(employmentRung(ctxFor(s))).toEqual({ type: "TravelTo", locationId: "employmentOffice" });
+  });
+
+  it("applies to the sustainable job once at the employment office, not the unsustainable higher-wage one", () => {
+    const s = solo(defaultConfig);
+    s.players[0].dependibility = 12;
+    s.players[0].locationId = "employmentOffice";
+    s.players[0].insideBuilding = true;
+    expect(employmentRung(ctxFor(s))).toEqual({ type: "ApplyForJob", jobId: "blacksMarket.janitor" });
+  });
+
+  it("quits when the current job has become permanently unworkable at today's dependibility", () => {
+    const s = solo(defaultConfig);
+    const p = s.players[0];
+    p.jobId = "factory.janitor"; // reqDependibility 20
+    p.dependibility = 10; // 10 < 20 - 5 = 15 -> unsustainable
+    expect(employmentRung(ctxFor(s))).toEqual({ type: "QuitJob" });
+  });
+
+  it("does not quit a job that's still sustainable", () => {
+    const s = solo(defaultConfig);
+    const p = s.players[0];
+    p.jobId = "factory.janitor";
+    p.dependibility = 16; // 16 >= 20 - 5 = 15 -> sustainable
+    p.wage = 25; // does not affect selection (employmentRung compares against the job's config baseWage, not p.wage)
     expect(employmentRung(ctxFor(s))).toBeNull();
   });
 });
