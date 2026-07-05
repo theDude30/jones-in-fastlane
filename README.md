@@ -73,15 +73,18 @@ play are designed-for and built afterward.
 | **M3c — Financial** | Complete | Banking (deposit/withdraw), loans, stock & T-bill trading via broker, lottery tickets. 9 commands, 10 events. |
 | **M3d — Housing & Pawn** | Complete | Rent payment, extension requests, apartment switching, wage garnishment, and a shared pawn shop (pawn/redeem/buy). 6 commands, 8 events. |
 | **M3e — Rent & Loan Due** | Complete | Loan repayment (PayLoan) and automatic start-of-turn due-date processing: unpaid rent becomes Rent Debt (driving wage garnishment), unpaid loans default. 1 command, 3 events. |
-| **M3 — AI players** | Complete | `@jones/ai` package: `RandomPlanner` + `GreedyPlanner` agents play full games headlessly through the existing `reduce` interface. Difficulty presets (easy/medium/hard) via config. |
+| **M3 — AI players** | Complete | `@jones/ai` package: `RandomPlanner` + `BudgetPlanner` (a budgeted priority-ladder agent) play full games headlessly through the existing `reduce` interface. Difficulty presets (easy/medium/hard) via config. Hard-difficulty `BudgetPlanner` legitimately wins 40/40 headless test seeds. |
 | **M3f — Food & Health** | Complete | Cooking Bonus, Hot Tub relaxation exemption, Spoiled Food, Starvation, Doctor Visit, and the new `Relax` command — fills in the start-of-turn sequence's food/health cluster. |
-| **M4a — State bridge & app shell** | Complete | `@jones/game` package: Zustand store bridges the UI to `@jones/core`'s `reduce`; a minimal debug screen proves the full human command-dispatch loop end-to-end. No board art, AI, or styling yet. |
+| **Guaranteed termination** | Complete | A `maxWeeks` cap (default 156) ends any game that hasn't produced a goals-based winner, awarding it on points — every headless game now provably terminates. |
+| **M4a — State bridge & app shell** | Complete | `@jones/game` package: Zustand store bridges the UI to `@jones/core`'s `reduce`; a minimal debug screen proves the full human command-dispatch loop end-to-end. |
 | **M4c — Action screens** | Complete | Real per-location screens (stores, bank/broker, pawn shop, university, employment office, rent office, home) replacing the debug screen's generic button list — every `@jones/core` command is now reachable from the UI. |
-| **M4 — Rendering + UI + audio** | In Progress | PixiJS board + responsive React UI + drop-in audio, wired to the core. **End of M4 = MVP:** full local game, solo-vs-AI and hotseat, responsive, placeholder 4K-ready art. |
+| **M4 — PixiJS board + AI wiring** | Complete | A clickable PixiJS board (13 locations, travel-path connectors, seat-colored tokens, travel animation) wired to `@jones/game`'s human/AI seats — solo-vs-AI is fully playable end-to-end, one click travels to and enters a building. |
+| **M4 — Placeholder art, audio, hotseat** | Not started | Current board/token/screen art is flat-colored placeholders, not the final 4K-ready assets. No audio (`howler.js` is a planned dependency, not yet added). Only one human seat is supported today (`gameStore.ts` always creates exactly one `isAI: false` player) — hotseat (multiple human players on one device) isn't implemented. **These are what's left before M4/MVP is done.** |
 | **M5 — Mobile packaging** | Future | Capacitor iOS/Android builds for the App Store / Play Store. |
 | **M6 — Online play** | Future | Server-authoritative networked multiplayer + AI-agent-as-player, added on the existing command-driven core. |
 
-M1, M2, M3a, M3b, M3c, M3d, M3e, M3 (AI players), M3f, M4a, and M4c are complete. Plans are in
+M1, M2, M3a, M3b, M3c, M3d, M3e, M3 (AI players), M3f, guaranteed termination, M4a, M4c, and the
+PixiJS board + AI wiring are complete. Plans are in
 [`docs/superpowers/plans/`](docs/superpowers/plans/).
 
 ## Documentation
@@ -105,9 +108,11 @@ pnpm test           # run the full test suite (logic packages + @jones/game)
 pnpm typecheck      # type-check every package
 ```
 
-**The app (`@jones/game`):** a Vite + React dev server. As of M4a it only renders a
-debug screen (raw game state, a fixed button per command) proving the engine is
-wired up — board art, styling, and audio land in later M4 sub-milestones.
+**The app (`@jones/game`):** a Vite + React dev server rendering a clickable PixiJS
+board (13 locations, seat-colored tokens, travel animation) plus per-location action
+screens for every game command. Solo-vs-AI is fully playable end-to-end. Board,
+building, and character art is still flat-colored placeholders — final art, audio,
+and hotseat (multiple human players) are the remaining M4 work.
 
 ```bash
 pnpm --filter @jones/game dev    # starts the dev server (prints the local URL)
@@ -124,4 +129,13 @@ pnpm test -- packages/core/test/finance.test.ts     # one file, any package
 
 ## Status
 
-M1, M2, M3a, M3b, M3c, M3d, M3e, M3 (AI players), M3f, M4a, and M4c are complete — 40 item types, full financial subsystem, rent/housing mechanics, wage garnishment, a shared pawn shop, loan repayment, automatic rent/loan due-date processing, headless AI opponents (random + greedy planners), Cooking Bonus/Starvation/Spoiled Food/Doctor Visit/Relax, and a working `@jones/game` app with real per-location action screens covering every command. 297 tests passing.
+M1, M2, M3a, M3b, M3c, M3d, M3e, M3 (AI players), M3f, guaranteed termination, M4a, M4c, and the
+PixiJS board + AI wiring are complete — 40 item types, full financial subsystem,
+rent/housing mechanics, wage garnishment, a shared pawn shop, loan repayment, automatic
+rent/loan due-date processing, a headless AI opponent (`BudgetPlanner`, winning 40/40
+test seeds) that's also playable live on a clickable board, Cooking Bonus/Starvation/
+Spoiled Food/Doctor Visit/Relax, and a `@jones/game` app with real per-location action
+screens covering every command. 400 tests passing.
+
+Remaining before M4/MVP is done: final 4K-ready art (board, buildings, characters),
+audio, and hotseat (multiple human players on one device).
