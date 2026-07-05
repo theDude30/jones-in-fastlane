@@ -5,7 +5,7 @@ export const constants: GameConstants = {
   hoursPerTurn: 60,
   weeksPerMonth: 4,
   maxPlayers: 4,
-  initialCash: 200,
+  initialCash: 400,
   initialDependibility: 20,
   initialExperience: 10,
   initialRelaxation: 10,

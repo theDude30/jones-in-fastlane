@@ -24,7 +24,7 @@ describe("Work", () => {
   it("pays 8x wage for a full session and grows exp/dep", () => {
     const { state, events } = reduce(workingGame(), { type: "Work" }, defaultConfig);
     const p = state.players[0];
-    expect(p.cash).toBe(200 + 8 * 5);     // 240
+    expect(p.cash).toBe(400 + 8 * 5);     // 440
     expect(p.hoursRemaining).toBe(54);    // 60 - 6
     expect(p.experience).toBe(11);
     expect(p.dependibility).toBe(13);
@@ -36,7 +36,7 @@ describe("Work", () => {
     g.players[0].hoursRemaining = 3;
     const { state } = reduce(g, { type: "Work" }, defaultConfig);
     // 8 * 5 * 3 / 6 = 20
-    expect(state.players[0].cash).toBe(220);
+    expect(state.players[0].cash).toBe(420);
     expect(state.players[0].hoursRemaining).toBe(0);
   });
 
@@ -56,7 +56,7 @@ describe("Work", () => {
     expect(state.players[0].jobId).toBeNull();
     expect(state.players[0].wage).toBe(0);
     expect(events.some((e) => e.type === "Fired")).toBe(true);
-    expect(state.players[0].cash).toBe(200);
+    expect(state.players[0].cash).toBe(400);
     expect(state.players[0].hoursRemaining).toBe(60);
     expect(state.players[0].experience).toBe(10);
   });
@@ -65,7 +65,7 @@ describe("Work", () => {
     const g = workingGame();
     g.players[0].clothing.casual = 0; // no casual clothes
     const { state, events } = reduce(g, { type: "Work" }, defaultConfig);
-    expect(state.players[0].cash).toBe(200);
+    expect(state.players[0].cash).toBe(400);
     expect(events.some((e) => e.type === "InvalidAction")).toBe(true);
   });
 

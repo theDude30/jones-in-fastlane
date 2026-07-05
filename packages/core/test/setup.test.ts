@@ -15,7 +15,7 @@ describe("createInitialGame", () => {
     ]);
     expect(game.players).toHaveLength(2);
     const alice = game.players[0];
-    expect(alice.cash).toBe(200); // unaffected: no Doctor Visit fired at this seed
+    expect(alice.cash).toBe(400); // unaffected: no Doctor Visit fired at this seed
     expect(alice.dependibility).toBe(17); // 20 - dependibilityDecayPerWeek (3)
     expect(alice.experience).toBe(10);
     expect(alice.relaxation).toBe(10); // already at the decay floor

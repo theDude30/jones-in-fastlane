@@ -32,7 +32,7 @@ describe("headless game", () => {
       { type: "Work" },
       { type: "Work" },
     ]);
-    expect(after.players[0].cash).toBe(200 + 2 * 8 * 5); // 280
+    expect(after.players[0].cash).toBe(400 + 2 * 8 * 5); // 480
     expect(after.players[0].experience).toBe(12);
   });
 

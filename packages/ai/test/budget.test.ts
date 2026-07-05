@@ -15,7 +15,7 @@ describe("adjustedItemPrice", () => {
 });
 
 describe("affordableItems", () => {
-  it("filters by predicate and affordability, at fresh-game cash ($200)", () => {
+  it("filters by predicate and affordability, at fresh-game cash ($400)", () => {
     const s = solo(defaultConfig);
     const casual = affordableItems(s.players[0], s, defaultConfig, economy, (it) => it.clothingCategory === "casual");
     expect(casual.map((c) => c.item.id).sort()).toEqual(["casualClothesQT", "casualClothesZMart"]);
@@ -38,7 +38,7 @@ describe("computeBudget", () => {
     expect(budget.foodReserve).toBe(65); // cheapest fastFood: fries
     expect(budget.uniformReserve).toBe(35); // cheapest casual: casualClothesZMart
     expect(budget.cashFloor).toBe(0 + 65 + 35 + PLANNER_TUNING.weeklyBuffer); // 150
-    expect(budget.discretionary).toBe(50); // cash 200 - cashFloor 150
+    expect(budget.discretionary).toBe(250); // cash 400 - cashFloor 150
   });
 
   it("reserves rent once due within the reserve horizon", () => {
