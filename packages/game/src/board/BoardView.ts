@@ -1,4 +1,4 @@
-import { Container, Graphics, Text, Ticker } from "pixi.js";
+import { Assets, Container, Graphics, Sprite, Text, Ticker } from "pixi.js";
 import { defaultConfig } from "@jones/config";
 import type { GameState } from "@jones/core";
 import { BOARD_ASPECT, boardLayout, boardPathOrder, computeBoardRect, toPixelPosition } from "./layout.js";
@@ -12,6 +12,7 @@ const TOKEN_RADIUS = 7;
 const TOKEN_SPACING = 18;
 const TRAVEL_DURATION_MS = 400;
 const SEAT_COLORS = ["#2a7fff", "#e0524a", "#2eb872", "#caa12e"];
+const BACKDROP_URL = "/board/town-backdrop.png";
 
 // Card/token pixel sizes above are tuned for the board at this width — the
 // width it gets whenever the container is at least 360px tall (16:9 against
@@ -32,6 +33,8 @@ function tokenY(centerY: number, scale: number): number {
  * itself, only from whatever state `PixiBoard.tsx` hands it.
  */
 export class BoardView {
+  private backdropLayer = new Container();
+  private backdropSprite: Sprite | null = null;
   private pathLayer = new Graphics();
   private buildingsLayer = new Container();
   private tokensLayer = new Container();
@@ -43,12 +46,26 @@ export class BoardView {
   private animatingPlayerId: string | null = null;
   private activeTick: ((ticker: Ticker) => void) | null = null;
   private activeAnimationToken: Graphics | null = null;
+  private destroyed = false;
 
   constructor(stage: Container, private onLocationClick: (locationId: string) => void) {
+    stage.addChild(this.backdropLayer);
     stage.addChild(this.pathLayer);
     stage.addChild(this.buildingsLayer);
     stage.addChild(this.tokensLayer);
     stage.addChild(this.animationLayer);
+
+    // Backdrop art loads asynchronously; lay it out once it's ready, using
+    // whatever board rect is current at that moment (resize() re-lays-out
+    // on every later resize too, same as the path and building cards). Guard
+    // against the view having been torn down before the load resolves (the
+    // same React StrictMode double-mount race documented on PixiBoard.tsx).
+    Assets.load(BACKDROP_URL).then((texture) => {
+      if (this.destroyed) return;
+      this.backdropSprite = new Sprite(texture);
+      this.backdropLayer.addChild(this.backdropSprite);
+      this.layoutBackdrop();
+    });
 
     for (const loc of defaultConfig.locations) {
       // A Container (not a Graphics) is required to hold both the card's
@@ -80,8 +97,16 @@ export class BoardView {
 
   resize(width: number, height: number): void {
     this.rect = computeBoardRect(width, height, BOARD_ASPECT);
+    this.layoutBackdrop();
     this.drawPath();
     if (this.lastState) this.syncState(this.lastState);
+  }
+
+  private layoutBackdrop(): void {
+    if (!this.backdropSprite || this.rect.boardWidth <= 0) return;
+    this.backdropSprite.width = this.rect.boardWidth;
+    this.backdropSprite.height = this.rect.boardHeight;
+    this.backdropSprite.position.set(this.rect.offsetX, this.rect.offsetY);
   }
 
   syncState(state: GameState): void {
@@ -131,7 +156,9 @@ export class BoardView {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.cancelActiveAnimation();
+    this.backdropLayer.destroy({ children: true });
     this.pathLayer.destroy();
     this.buildingsLayer.destroy({ children: true });
     this.tokensLayer.destroy({ children: true });
