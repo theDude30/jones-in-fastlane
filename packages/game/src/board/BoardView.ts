@@ -17,8 +17,8 @@ import { clusterPlayersByLocation, fanOffsets } from "./playerClusters.js";
 
 const CARD_WIDTH = 96;
 const CARD_HEIGHT = 56;
-const CAR_SIZE = 24;
-const TOKEN_SPACING = 22;
+const CAR_SIZE = 64;
+const TOKEN_SPACING = 50;
 const TRAVEL_DURATION_MS = 400;
 const SEAT_COLORS = ["#2a7fff", "#e0524a", "#2eb872", "#caa12e"];
 const BACKDROP_URL = "/board/town-backdrop.png";
