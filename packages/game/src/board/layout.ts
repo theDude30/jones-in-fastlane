@@ -115,6 +115,22 @@ export function shortestRoadDelta(fromId: string, toId: string): number {
   return (forward <= backward ? forward : -backward) / size;
 }
 
+const HEADING_EPSILON = 0.0005;
+
+/**
+ * The tangent heading (radians, `atan2` convention) of the road's
+ * centerline at arc-length fraction `s`, in the direction of travel given by
+ * `direction` (+1 = increasing `s`, -1 = decreasing). Computed by finite
+ * differencing two nearby points converted to actual pixel space via `rect`
+ * first — the board isn't square, so differencing in fractional space would
+ * skew the angle toward whichever axis is stretched more.
+ */
+export function roadHeadingAt(s: number, direction: 1 | -1, rect: BoardRect): number {
+  const a = toPixelPosition(roadPointAt(s), rect);
+  const b = toPixelPosition(roadPointAt(s + HEADING_EPSILON * direction), rect);
+  return Math.atan2(b.y - a.y, b.x - a.x);
+}
+
 /**
  * Fits a 16:9 (by default) board into a containerWidth x containerHeight
  * area, preserving aspect ratio (letterboxed, never stretched/distorted).

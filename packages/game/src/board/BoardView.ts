@@ -1,4 +1,4 @@
-import { Assets, Container, Graphics, Sprite, Text, Ticker } from "pixi.js";
+import { Assets, Container, Graphics, Sprite, Text, Texture, Ticker } from "pixi.js";
 import { defaultConfig } from "@jones/config";
 import type { GameState } from "@jones/core";
 import {
@@ -6,6 +6,7 @@ import {
   boardLayout,
   computeBoardRect,
   roadFractionByLocation,
+  roadHeadingAt,
   roadPointAt,
   shortestRoadDelta,
   toPixelPosition,
@@ -16,11 +17,17 @@ import { clusterPlayersByLocation, fanOffsets } from "./playerClusters.js";
 
 const CARD_WIDTH = 96;
 const CARD_HEIGHT = 56;
-const TOKEN_RADIUS = 7;
-const TOKEN_SPACING = 18;
+const CAR_SIZE = 24;
+const TOKEN_SPACING = 22;
 const TRAVEL_DURATION_MS = 400;
 const SEAT_COLORS = ["#2a7fff", "#e0524a", "#2eb872", "#caa12e"];
 const BACKDROP_URL = "/board/town-backdrop.png";
+const CAR_URL = "/board/car.png";
+
+// The car artwork's nose points toward the bottom of its source image (+y,
+// i.e. `atan2` angle +90°) — this offset rotates that default orientation to
+// match whatever heading angle the car is actually facing on the road.
+const CAR_NOSE_OFFSET = Math.PI / 2;
 
 // Card/token pixel sizes above are tuned for the board at this width — the
 // width it gets whenever the container is at least 360px tall (16:9 against
@@ -47,12 +54,13 @@ export class BoardView {
   private tokensLayer = new Container();
   private animationLayer = new Container();
   private buildingCards = new Map<string, { container: Container; graphics: Graphics }>();
-  private playerTokens = new Map<string, Graphics>();
+  private playerTokens = new Map<string, Sprite>();
+  private carTexture: Texture | null = null;
   private rect: BoardRect = { boardWidth: 0, boardHeight: 0, offsetX: 0, offsetY: 0 };
   private lastState: GameState | null = null;
   private animatingPlayerId: string | null = null;
   private activeTick: ((ticker: Ticker) => void) | null = null;
-  private activeAnimationToken: Graphics | null = null;
+  private activeAnimationToken: Sprite | null = null;
   private destroyed = false;
 
   constructor(stage: Container, private onLocationClick: (locationId: string) => void) {
@@ -71,6 +79,15 @@ export class BoardView {
       this.backdropSprite = new Sprite(texture);
       this.backdropLayer.addChild(this.backdropSprite);
       this.layoutBackdrop();
+    });
+
+    // Car artwork loads asynchronously too; tokens can't be created as
+    // sprites until it resolves, so redraw once it's ready (same guard/retry
+    // pattern as the backdrop above).
+    Assets.load(CAR_URL).then((texture) => {
+      if (this.destroyed) return;
+      this.carTexture = texture;
+      if (this.lastState) this.drawTokens(this.lastState);
     });
 
     for (const loc of defaultConfig.locations) {
@@ -127,6 +144,13 @@ export class BoardView {
     onComplete: () => void,
   ): void {
     this.cancelActiveAnimation();
+    // The car texture loads asynchronously; travel commands already landed
+    // in game state by the time this is called, so if the sprite isn't
+    // ready yet, skip the visual and still fire the follow-up command.
+    if (!this.carTexture) {
+      onComplete();
+      return;
+    }
     this.animatingPlayerId = playerId;
     const scale = this.scale;
     const seatIndex = Number(playerId.slice(1));
@@ -136,13 +160,16 @@ export class BoardView {
     // charged, so the trip a player sees always matches what they paid for.
     const fromFraction = roadFractionByLocation[fromLocationId];
     const delta = shortestRoadDelta(fromLocationId, toLocationId);
+    const direction: 1 | -1 = delta >= 0 ? 1 : -1;
     const start = toPixelPosition(roadPointAt(fromFraction), this.rect);
 
-    const token = new Graphics();
-    token.circle(0, 0, TOKEN_RADIUS).fill(SEAT_COLORS[seatIndex] ?? "#888888");
-    token.stroke({ width: 2, color: "#ffffff" });
-    token.scale.set(scale);
+    const token = new Sprite(this.carTexture);
+    token.anchor.set(0.5);
+    token.tint = SEAT_COLORS[seatIndex] ?? "#888888";
+    token.width = CAR_SIZE * scale;
+    token.height = CAR_SIZE * scale;
     token.position.set(start.x, start.y);
+    token.rotation = roadHeadingAt(fromFraction, direction, this.rect) - CAR_NOSE_OFFSET;
     this.animationLayer.addChild(token);
 
     // Redraw the static token layer now, excluding the animating player, so
@@ -153,8 +180,10 @@ export class BoardView {
     const tick = (ticker: Ticker) => {
       elapsed += ticker.deltaMS;
       const t = Math.min(1, elapsed / TRAVEL_DURATION_MS);
-      const point = toPixelPosition(roadPointAt(fromFraction + delta * t), this.rect);
+      const s = fromFraction + delta * t;
+      const point = toPixelPosition(roadPointAt(s), this.rect);
       token.position.set(point.x, point.y);
+      token.rotation = roadHeadingAt(s, direction, this.rect) - CAR_NOSE_OFFSET;
       if (t >= 1) {
         this.cancelActiveAnimation();
         if (this.lastState) this.drawTokens(this.lastState);
@@ -206,13 +235,14 @@ export class BoardView {
   }
 
   private drawTokens(state: GameState): void {
-    // Tokens are persistent, one Graphics per player, reused and
-    // repositioned every call — never recreated. Creating/destroying many
-    // Graphics objects within a single synchronous burst (once per
-    // syncState call) raced with Pixi's WebGL batch renderer and threw
-    // "Cannot read properties of null (reading 'geometry')" intermittently;
-    // reusing objects (the same pattern already used for building cards)
-    // eliminates the churn that caused it.
+    // Tokens are persistent, one Sprite per player, reused and repositioned
+    // every call — never recreated. Creating/destroying many display
+    // objects within a single synchronous burst (once per syncState call)
+    // raced with Pixi's WebGL batch renderer and threw "Cannot read
+    // properties of null (reading 'geometry')" intermittently; reusing
+    // objects (the same pattern already used for building cards) eliminates
+    // the churn that caused it.
+    if (!this.carTexture) return;
     const scale = this.scale;
     const clusters = clusterPlayersByLocation(state.players);
     const visiblePlayerIds = new Set<string>();
@@ -221,21 +251,26 @@ export class BoardView {
       // On the road at this location's stop, not on the building card —
       // matches where playTravelAnimation starts and ends, so there's no
       // visual jump between arriving and coming to rest.
-      const { x, y } = toPixelPosition(roadPointAt(roadFractionByLocation[locationId]), this.rect);
+      const fraction = roadFractionByLocation[locationId];
+      const { x, y } = toPixelPosition(roadPointAt(fraction), this.rect);
+      // Parked cars face the direction of forward travel around the ring.
+      const rotation = roadHeadingAt(fraction, 1, this.rect) - CAR_NOSE_OFFSET;
       const offsets = fanOffsets(visible.length, TOKEN_SPACING * scale);
       visible.forEach((player, i) => {
         visiblePlayerIds.add(player.id);
         let token = this.playerTokens.get(player.id);
         if (!token) {
-          token = new Graphics();
+          token = new Sprite(this.carTexture!);
+          token.anchor.set(0.5);
           const seatIndex = Number(player.id.slice(1));
-          token.circle(0, 0, TOKEN_RADIUS).fill(SEAT_COLORS[seatIndex] ?? "#888888");
-          token.stroke({ width: 2, color: "#ffffff" });
+          token.tint = SEAT_COLORS[seatIndex] ?? "#888888";
           this.tokensLayer.addChild(token);
           this.playerTokens.set(player.id, token);
         }
         token.visible = true;
-        token.scale.set(scale);
+        token.width = CAR_SIZE * scale;
+        token.height = CAR_SIZE * scale;
+        token.rotation = rotation;
         token.position.set(x + offsets[i], y);
       });
     }
