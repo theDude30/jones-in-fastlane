@@ -10,6 +10,14 @@ type Outcome =
   | { jobId: string; status: "rejected"; reasons: string[] }
   | { jobId: string; status: "no-time" };
 
+type ManagerMood = "neutral" | "hired" | "rejected";
+
+const MANAGER_MEDIA: Record<ManagerMood, { src: string; video: boolean }> = {
+  neutral: { src: "/board/hr-manager-neutral.png", video: false },
+  hired: { src: "/board/hr-manager-happy.mp4", video: true },
+  rejected: { src: "/board/hr-manager-sad.mp4", video: true },
+};
+
 /** Requirements the player currently falls short of — drives both the
  * red/green requirement pills on each job card and the rejection reason. */
 function unmetRequirements(
@@ -30,6 +38,27 @@ function unmetRequirements(
     reasons.push(`requires ${missingDegrees.map(degreeName).join(", ")}`);
   }
   return reasons;
+}
+
+function ManagerPanel({ mood }: { mood: ManagerMood }) {
+  const media = MANAGER_MEDIA[mood];
+  return (
+    <aside className="eo-manager">
+      {media.video ? (
+        <video
+          key={media.src}
+          className="eo-manager-media"
+          src={media.src}
+          autoPlay
+          loop
+          muted
+          playsInline
+        />
+      ) : (
+        <img key={media.src} className="eo-manager-media" src={media.src} alt="Hiring manager" />
+      )}
+    </aside>
+  );
 }
 
 export function EmploymentOfficeScreen() {
@@ -85,6 +114,8 @@ export function EmploymentOfficeScreen() {
   }
 
   const selectedEmployer = employers.find((e) => e.id === selectedEmployerId) ?? null;
+  const managerMood: ManagerMood =
+    outcome?.status === "hired" ? "hired" : outcome?.status === "rejected" ? "rejected" : "neutral";
 
   return (
     <div className="eo-overlay">
@@ -95,75 +126,79 @@ export function EmploymentOfficeScreen() {
         </button>
       </header>
 
-      <div className="eo-body">
-        {selectedEmployer === null ? (
-          <ul className="eo-company-list">
-            {employers.map((employer) => (
-              <li key={employer.id}>
-                <button className="eo-company-card" onClick={() => selectEmployer(employer.id)}>
-                  <span className="eo-avatar">{employer.name.charAt(0)}</span>
-                  <span className="eo-company-info">
-                    <span className="eo-company-name">{employer.name}</span>
-                    <span className="eo-company-sub">{jobCount(employer.id)} open positions</span>
-                  </span>
-                  <span className="eo-chevron">›</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <>
-            <button className="eo-back" onClick={backToCompanies}>
-              ‹ Companies
-            </button>
-            <h3 className="eo-company-title">{selectedEmployer.name}</h3>
-            <ul className="eo-job-list">
-              {config.jobs
-                .filter((job) => job.locationId === selectedEmployer.id)
-                .map((job) => {
-                  const wage = economy.adjustedPrice(job.baseWage, state.economy.reading);
-                  const reqs = unmetRequirements(job, p, depGateActive, degreeName);
-                  const isCurrentJob = p.jobId === job.id;
-                  const jobOutcome = outcome && outcome.jobId === job.id ? outcome : null;
-                  return (
-                    <li key={job.id} className="eo-job-card">
-                      <div className="eo-job-main">
-                        <span className="eo-job-title">{job.title}</span>
-                        <span className="eo-job-wage">${wage.toFixed(2)}/hr</span>
-                      </div>
-                      <div className="eo-job-reqs">
-                        <span className={`eo-pill ${reqs.length === 0 ? "eo-pill--met" : "eo-pill--unmet"}`}>
-                          Exp {job.reqExperience}+
-                        </span>
-                        {job.reqDegrees.map((d) => (
-                          <span
-                            key={d}
-                            className={`eo-pill ${p.degrees.includes(d) ? "eo-pill--met" : "eo-pill--unmet"}`}
-                          >
-                            {degreeName(d)}
-                          </span>
-                        ))}
-                      </div>
-                      {jobOutcome && (
-                        <p className={`eo-outcome eo-outcome--${jobOutcome.status}`}>
-                          {jobOutcome.status === "hired" && `HIRED! You're now the ${job.title} — $${jobOutcome.wage.toFixed(2)}/hr.`}
-                          {jobOutcome.status === "rejected" && `REJECTED — ${jobOutcome.reasons.join("; ")}.`}
-                          {jobOutcome.status === "no-time" && "Not enough hours left today to apply."}
-                        </p>
-                      )}
-                      {isCurrentJob ? (
-                        <span className="eo-current-job">Current job</span>
-                      ) : (
-                        <button className="eo-apply" onClick={() => handleApply(job)}>
-                          Apply
-                        </button>
-                      )}
-                    </li>
-                  );
-                })}
+      <div className="eo-main">
+        <div className="eo-menu">
+          {selectedEmployer === null ? (
+            <ul className="eo-company-list">
+              {employers.map((employer) => (
+                <li key={employer.id}>
+                  <button className="eo-company-card" onClick={() => selectEmployer(employer.id)}>
+                    <span className="eo-avatar">{employer.name.charAt(0)}</span>
+                    <span className="eo-company-info">
+                      <span className="eo-company-name">{employer.name}</span>
+                      <span className="eo-company-sub">{jobCount(employer.id)} open positions</span>
+                    </span>
+                    <span className="eo-chevron">›</span>
+                  </button>
+                </li>
+              ))}
             </ul>
-          </>
-        )}
+          ) : (
+            <>
+              <button className="eo-back" onClick={backToCompanies}>
+                ‹ Companies
+              </button>
+              <h3 className="eo-company-title">{selectedEmployer.name}</h3>
+              <ul className="eo-job-list">
+                {config.jobs
+                  .filter((job) => job.locationId === selectedEmployer.id)
+                  .map((job) => {
+                    const wage = economy.adjustedPrice(job.baseWage, state.economy.reading);
+                    const reqs = unmetRequirements(job, p, depGateActive, degreeName);
+                    const isCurrentJob = p.jobId === job.id;
+                    const jobOutcome = outcome && outcome.jobId === job.id ? outcome : null;
+                    return (
+                      <li key={job.id} className="eo-job-card">
+                        <div className="eo-job-main">
+                          <span className="eo-job-title">{job.title}</span>
+                          <span className="eo-job-wage">${wage.toFixed(2)}/hr</span>
+                        </div>
+                        <div className="eo-job-reqs">
+                          <span className={`eo-pill ${reqs.length === 0 ? "eo-pill--met" : "eo-pill--unmet"}`}>
+                            Exp {job.reqExperience}+
+                          </span>
+                          {job.reqDegrees.map((d) => (
+                            <span
+                              key={d}
+                              className={`eo-pill ${p.degrees.includes(d) ? "eo-pill--met" : "eo-pill--unmet"}`}
+                            >
+                              {degreeName(d)}
+                            </span>
+                          ))}
+                        </div>
+                        {jobOutcome && (
+                          <p className={`eo-outcome eo-outcome--${jobOutcome.status}`}>
+                            {jobOutcome.status === "hired" &&
+                              `HIRED! You're now the ${job.title} — $${jobOutcome.wage.toFixed(2)}/hr.`}
+                            {jobOutcome.status === "rejected" && `REJECTED — ${jobOutcome.reasons.join("; ")}.`}
+                            {jobOutcome.status === "no-time" && "Not enough hours left today to apply."}
+                          </p>
+                        )}
+                        {isCurrentJob ? (
+                          <span className="eo-current-job">Current job</span>
+                        ) : (
+                          <button className="eo-apply" onClick={() => handleApply(job)}>
+                            Apply
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+              </ul>
+            </>
+          )}
+        </div>
+        <ManagerPanel mood={managerMood} />
       </div>
     </div>
   );
