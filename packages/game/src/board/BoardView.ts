@@ -24,6 +24,19 @@ const SEAT_COLORS = ["#2a7fff", "#e0524a", "#2eb872", "#caa12e"];
 const BACKDROP_URL = "/board/town-backdrop.png";
 const CAR_URL = "/board/car.png";
 
+// Locations with dedicated illustrated art instead of the flat placeholder
+// card. `size` is the sprite's width/height in the same reference-scale
+// units as CARD_WIDTH/HEIGHT (the container's own scale transform handles
+// shrinking it to fit the actual board size, same as the card graphics).
+// `verticalOffset` nudges the art (and its label) up or down from the
+// location's boardLayout point, in the same units — needed when a larger
+// icon would otherwise clip past the board canvas's edge, which has zero
+// margin on whichever side the board's aspect ratio pins to the
+// container. employmentOffice sits at y=0.901, a hair from the bottom.
+const CUSTOM_BUILDING_ART: Partial<Record<string, { url: string; size: number; verticalOffset: number }>> = {
+  employmentOffice: { url: "/board/employment-office.png", size: 112, verticalOffset: -26 },
+};
+
 // The car artwork's nose points toward the bottom of its source image (+y,
 // i.e. `atan2` angle +90°) — this offset rotates that default orientation to
 // match whatever heading angle the car is actually facing on the road.
@@ -53,9 +66,13 @@ export class BoardView {
   private buildingsLayer = new Container();
   private tokensLayer = new Container();
   private animationLayer = new Container();
-  private buildingCards = new Map<string, { container: Container; graphics: Graphics }>();
+  private buildingCards = new Map<
+    string,
+    { container: Container; graphics: Graphics; label: Text; sprite?: Sprite }
+  >();
   private playerTokens = new Map<string, Sprite>();
   private carTexture: Texture | null = null;
+  private customArtTextures = new Map<string, Texture>();
   private rect: BoardRect = { boardWidth: 0, boardHeight: 0, offsetX: 0, offsetY: 0 };
   private lastState: GameState | null = null;
   private activeAnimations = new Map<string, { token: Sprite; tick: (ticker: Ticker) => void }>();
@@ -88,6 +105,17 @@ export class BoardView {
       if (this.lastState) this.drawTokens(this.lastState);
     });
 
+    // Illustrated building art (currently just Employment Office) loads the
+    // same way — redraw once each one resolves so it appears without
+    // waiting for the next unrelated state change.
+    for (const [locationId, art] of Object.entries(CUSTOM_BUILDING_ART)) {
+      Assets.load(art!.url).then((texture) => {
+        if (this.destroyed) return;
+        this.customArtTextures.set(locationId, texture);
+        if (this.lastState) this.drawBuildingCards(this.lastState);
+      });
+    }
+
     for (const loc of defaultConfig.locations) {
       // A Container (not a Graphics) is required to hold both the card's
       // rect and its label — Pixi v8 deprecates adding children directly to
@@ -108,7 +136,7 @@ export class BoardView {
       container.addChild(label);
 
       this.buildingsLayer.addChild(container);
-      this.buildingCards.set(loc.id, { container, graphics });
+      this.buildingCards.set(loc.id, { container, graphics, label });
     }
   }
 
@@ -219,15 +247,48 @@ export class BoardView {
     const human = state.players[0];
     const scale = this.scale;
     for (const loc of defaultConfig.locations) {
-      const { container, graphics } = this.buildingCards.get(loc.id)!;
+      const entry = this.buildingCards.get(loc.id)!;
+      const { container, graphics, label } = entry;
       const { x, y } = toPixelPosition(boardLayout[loc.id], this.rect);
       container.position.set(x, y);
       container.scale.set(scale);
-      graphics.clear();
-      graphics.roundRect(-CARD_WIDTH / 2, -CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT, 6);
-      graphics.fill(buildingColor(loc.types));
       const isHere = human.insideBuilding && human.locationId === loc.id;
-      graphics.stroke({ width: isHere ? 3 : 1.5, color: isHere ? "#222222" : "#444444" });
+
+      const art = CUSTOM_BUILDING_ART[loc.id];
+      const artTexture = art && this.customArtTextures.get(loc.id);
+      graphics.clear();
+      if (art && artTexture) {
+        // Illustrated art replaces the flat card. The name renders as a
+        // pill-backed label overlapping the icon's own bottom edge, inside
+        // its footprint — not as a caption below it, which would clip off
+        // the board's fixed-height canvas for locations near its outer
+        // edge (this one sits at y=0.901, a hair from the bottom). The
+        // artwork's own blank signboard is too narrow at board scale for
+        // legible text, so it stays a decorative flourish instead.
+        if (!entry.sprite) {
+          entry.sprite = new Sprite(artTexture);
+          entry.sprite.anchor.set(0.5);
+          container.addChildAt(entry.sprite, 0);
+        }
+        entry.sprite.width = art.size;
+        entry.sprite.height = art.size;
+        entry.sprite.position.set(0, art.verticalOffset);
+        const labelY = art.verticalOffset + art.size / 2 - 14;
+        graphics.roundRect(-art.size / 2 + 6, labelY - 10, art.size - 12, 20, 8);
+        graphics.fill({ color: "#ffffff", alpha: 0.85 });
+        if (isHere) {
+          graphics.roundRect(-art.size / 2 - 4, art.verticalOffset - art.size / 2 - 4, art.size + 8, art.size + 8, 12);
+          graphics.stroke({ width: 3, color: "#222222" });
+        }
+        label.position.set(0, labelY);
+        label.style.wordWrapWidth = art.size - 16;
+      } else {
+        graphics.roundRect(-CARD_WIDTH / 2, -CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT, 6);
+        graphics.fill(buildingColor(loc.types));
+        graphics.stroke({ width: isHere ? 3 : 1.5, color: isHere ? "#222222" : "#444444" });
+        label.position.set(0, 0);
+        label.style.wordWrapWidth = CARD_WIDTH - 8;
+      }
     }
   }
 
