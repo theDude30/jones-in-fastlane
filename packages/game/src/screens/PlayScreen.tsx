@@ -21,7 +21,14 @@ export function PlayScreen() {
           {state.winners.length > 0 && ` — winner: ${state.winners.join(", ")}`}
         </div>
       )}
-      <PixiBoard />
+      {/* position: relative gives LocationScreen's overlay-style panels (e.g.
+          the Employment Office) a positioning context to cover exactly the
+          board above them; panels that render as normal in-flow content are
+          unaffected since this wrapper doesn't constrain their height. */}
+      <div style={{ position: "relative" }}>
+        <PixiBoard />
+        {player.insideBuilding && <LocationScreen />}
+      </div>
       <section>
         <p>Player: {player.name}</p>
         <p>Week: {state.week}</p>
@@ -30,11 +37,6 @@ export function PlayScreen() {
         <p>Inside: {player.insideBuilding ? "yes" : "no"}</p>
         <p>Hours remaining: {player.hoursRemaining}</p>
       </section>
-      {player.insideBuilding && (
-        <section>
-          <LocationScreen />
-        </section>
-      )}
       <section>
         <button onClick={() => dispatch({ type: "EndTurn" })}>End Turn</button>
       </section>

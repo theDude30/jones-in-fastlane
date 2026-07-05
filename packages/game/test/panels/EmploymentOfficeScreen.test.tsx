@@ -35,4 +35,32 @@ describe("EmploymentOfficeScreen", () => {
     fireEvent.click(screen.getAllByText("Apply")[0]);
     expect(useGameStore.getState().state!.players[0].jobId).toBe("monolithBurgers.cook");
   });
+
+  it("shows a HIRED notification after a successful application", () => {
+    atEmploymentOffice();
+    render(<EmploymentOfficeScreen />);
+    fireEvent.click(screen.getByText("Monolith Burgers"));
+    fireEvent.click(screen.getAllByText("Apply")[0]); // Cook, alwaysApproved
+    expect(screen.getByText(/HIRED/)).toBeInTheDocument();
+  });
+
+  it("shows a REJECTED notification with the missing degree as the reason", () => {
+    atEmploymentOffice();
+    render(<EmploymentOfficeScreen />);
+    fireEvent.click(screen.getByText("Z-Mart"));
+    // Z-Mart lists Clerk, Assistant Manager, Manager — Manager requires the
+    // juniorCollege degree, which a fresh player doesn't have, so this is a
+    // deterministic stats rejection (no luck roll involved).
+    fireEvent.click(screen.getAllByText("Apply")[2]);
+    expect(screen.getByText(/REJECTED/)).toBeInTheDocument();
+    expect(screen.getByText(/requires Junior College/)).toBeInTheDocument();
+    expect(useGameStore.getState().state!.players[0].jobId).toBeNull();
+  });
+
+  it("leaves the building when Leave is clicked", () => {
+    atEmploymentOffice();
+    render(<EmploymentOfficeScreen />);
+    fireEvent.click(screen.getByText("Leave"));
+    expect(useGameStore.getState().state!.players[0].insideBuilding).toBe(false);
+  });
 });
