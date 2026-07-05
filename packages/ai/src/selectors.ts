@@ -16,7 +16,7 @@ export const isInside = (p: PlayerState): boolean => p.insideBuilding;
 /**
  * A conservative set of commands that `reduce` will currently accept for this
  * player, restricted to the M3 AI repertoire (navigation, Work, ApplyForJob,
- * Enroll, Study, BuyItem, EndTurn). Used by RandomPlanner and greedy mistakes.
+ * Enroll, Study, BuyItem, EndTurn). Used by RandomPlanner and BudgetPlanner's epsilon mistakes.
  */
 export function legalCommands(state: GameState, playerId: string, config: GameConfig): Command[] {
   const p = findPlayer(state, playerId);

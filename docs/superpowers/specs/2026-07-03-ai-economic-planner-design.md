@@ -188,3 +188,13 @@ If 90% proves flaky at 40 seeds, tune the planner, not the threshold.
 - Poverty-recovery beyond what donations + the timed cap already provide.
 - The known `locationId`/`apartmentId` reset bug in `turn.ts` (tracked
   separately; the planner reads `apartmentId` for Relax so it is unaffected).
+
+**Amendment (post-implementation, during Task 9):** `QuitJob` was added to
+`employmentRung` as a narrow, free escape hatch — if the current job has
+decayed below the same `-5` firing-avoidance buffer `workCommand` already
+enforces (because `ApplyForJob`'s luck roll delayed hiring past a few weeks
+of dependability decay), the planner quits so it can re-apply somewhere
+sustainable, instead of freezing forever with the career goal permanently
+unreachable. This closed a real 31/40-seed shortfall against the 90%
+win-rate bar. `QuitJob` remains otherwise unused (never issued speculatively
+or as a strategy in its own right).
