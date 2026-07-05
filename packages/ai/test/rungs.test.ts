@@ -3,7 +3,7 @@ import { defaultConfig } from "@jones/config";
 import { makeEconomy } from "@jones/core";
 import type { GameState } from "@jones/core";
 import { computeBudget } from "../src/budget.js";
-import { eatRung, rentRung, clothesRung, healthRung } from "../src/rungs.js";
+import { eatRung, rentRung, clothesRung, healthRung, employmentRung, depMaintenanceWorkRung, cashFloorWorkRung } from "../src/rungs.js";
 import type { TurnContext } from "../src/rungs.js";
 import { solo } from "./testHelpers.js";
 
@@ -108,5 +108,93 @@ describe("healthRung", () => {
     const s = solo(defaultConfig);
     s.players[0].relaxation = 20;
     expect(healthRung(ctxFor(s))).toBeNull();
+  });
+});
+
+describe("employmentRung", () => {
+  it("applies for the best-paying eligible job when unemployed", () => {
+    const s = solo(defaultConfig); // week 1: dep gate off, exp=10 qualifies several jobs
+    // Best-paying eligible job at week 1, exp 10, no degrees: factory.janitor ($7/hr).
+    expect(employmentRung(ctxFor(s))).toEqual({ type: "TravelTo", locationId: "employmentOffice" });
+  });
+
+  it("applies once at the employment office", () => {
+    const s = solo(defaultConfig);
+    s.players[0].locationId = "employmentOffice";
+    s.players[0].insideBuilding = true;
+    expect(employmentRung(ctxFor(s))).toEqual({ type: "ApplyForJob", jobId: "factory.janitor" });
+  });
+
+  it("does nothing when already employed and no worthwhile upgrade is eligible", () => {
+    const s = solo(defaultConfig);
+    s.players[0].jobId = "factory.generalManager"; // top wage, nothing higher exists
+    s.players[0].wage = 25;
+    expect(employmentRung(ctxFor(s))).toBeNull();
+  });
+});
+
+describe("depMaintenanceWorkRung", () => {
+  it("does nothing without a job", () => {
+    const s = solo(defaultConfig);
+    expect(depMaintenanceWorkRung(ctxFor(s))).toBeNull();
+  });
+
+  it("does nothing when dependibility is already at its cap", () => {
+    const s = solo(defaultConfig);
+    const p = s.players[0];
+    p.jobId = "zMart.clerk";
+    p.maxDependibility = p.dependibility; // already at cap
+    expect(depMaintenanceWorkRung(ctxFor(s))).toBeNull();
+  });
+
+  it("works toward the cap once employed and below it", () => {
+    const s = solo(defaultConfig);
+    const p = s.players[0];
+    p.jobId = "zMart.clerk"; // reqDependibility 10 -> maxDependibility becomes 20+10+0=30
+    p.maxDependibility = 30;
+    p.wage = 10;
+    p.locationId = "zMart";
+    p.insideBuilding = true;
+    expect(depMaintenanceWorkRung(ctxFor(s))).toEqual({ type: "Work" });
+  });
+
+  it("won't Work if the uniform isn't met (leaves it to clothesRung)", () => {
+    const s = solo(defaultConfig);
+    const p = s.players[0];
+    p.jobId = "zMart.clerk";
+    p.maxDependibility = 30;
+    p.wage = 10;
+    p.locationId = "zMart";
+    p.insideBuilding = true;
+    p.clothing = { casual: 0, dress: 0, business: 0 };
+    expect(depMaintenanceWorkRung(ctxFor(s))).toBeNull();
+  });
+});
+
+describe("cashFloorWorkRung", () => {
+  it("does nothing without a job", () => {
+    const s = solo(defaultConfig);
+    expect(cashFloorWorkRung(ctxFor(s))).toBeNull();
+  });
+
+  it("does nothing when cash already covers the floor", () => {
+    const s = solo(defaultConfig); // cash 200, floor ~150 (see budget.test.ts)
+    const p = s.players[0];
+    p.jobId = "zMart.clerk";
+    p.wage = 10;
+    p.locationId = "zMart";
+    p.insideBuilding = true;
+    expect(cashFloorWorkRung(ctxFor(s))).toBeNull();
+  });
+
+  it("works when cash is below the floor", () => {
+    const s = solo(defaultConfig);
+    const p = s.players[0];
+    p.jobId = "zMart.clerk";
+    p.wage = 10;
+    p.locationId = "zMart";
+    p.insideBuilding = true;
+    p.cash = 50; // below the ~150 floor
+    expect(cashFloorWorkRung(ctxFor(s))).toEqual({ type: "Work" });
   });
 });
