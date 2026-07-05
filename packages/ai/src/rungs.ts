@@ -1,7 +1,7 @@
 import { bestUniform, findJob, meetsUniform, ownsDurableType } from "@jones/core";
 import type { Command, Economy, GameState, PlayerState } from "@jones/core";
-import type { GameConfig, UniformLevel } from "@jones/config";
-import { canAfford, hasHours, eligibleJobs } from "./selectors.js";
+import type { GameConfig, UniformLevel, DurableType } from "@jones/config";
+import { canAfford, hasHours, eligibleJobs, enrollableDegrees } from "./selectors.js";
 import { goBuy, navigateInto } from "./nav.js";
 import { adjustedItemPrice, PLANNER_TUNING, type TurnBudget } from "./budget.js";
 
@@ -143,5 +143,61 @@ export function cashFloorWorkRung(ctx: TurnContext): Command | null {
   const { player: p, config, budget } = ctx;
   if (p.jobId === null) return null;
   if (p.cash >= budget.cashFloor) return null;
+  return workCommand(p, config);
+}
+
+/** Rung 8: enroll/study toward the education goal (2 degrees by default). */
+export function educationRung(ctx: TurnContext): Command | null {
+  const { player: p, state, config, economy } = ctx;
+  const eduScore = 1 + 9 * p.degrees.length;
+  if (eduScore >= p.goals.education) return null;
+
+  const nav = navigateInto(p, "hiTechU", config);
+  if (nav) return nav;
+  if (p.locationId !== "hiTechU" || !p.insideBuilding) return null;
+  if (!hasHours(p, config.actionCosts.study)) return null;
+
+  if (p.enrollments.length > 0) return { type: "Study", degreeId: p.enrollments[0].degreeId };
+
+  const options = enrollableDegrees(p, state, config, economy);
+  if (options.length === 0) return null;
+  const preferred = options.find((id) => config.degrees.find((d) => d.id === id)!.prereqs.length === 0) ?? options[0];
+  return { type: "Enroll", degreeId: preferred };
+}
+
+/** Rung 9: pump happiness (from discretionary cash only) toward goal + buffer. */
+export function happinessRung(ctx: TurnContext): Command | null {
+  const { player: p, state, config, economy, budget } = ctx;
+  if (p.happiness >= p.goals.happiness + PLANNER_TUNING.happinessBuffer) return null;
+
+  const durableTypes: DurableType[] = ["microwave", "refrigerator"];
+  for (const durableType of durableTypes) {
+    if (ownsDurableType(p, config, durableType)) continue;
+    const candidates = config.items
+      .filter((it) => it.durableType === durableType)
+      .map((it) => ({ it, price: adjustedItemPrice(it, state, economy) }))
+      .filter(({ price }) => price <= budget.discretionary)
+      .sort((a, b) => a.price - b.price);
+    if (candidates.length > 0) return goBuy(p, candidates[0].it.locationId, candidates[0].it.id, config);
+  }
+
+  const ticketCandidates = config.items
+    .filter((it) => it.category === "ticket")
+    .filter((it) => !it.happinessGroup || !p.happyGroupsThisTurn.includes(it.happinessGroup))
+    .map((it) => ({ it, price: adjustedItemPrice(it, state, economy) }))
+    .filter(({ price }) => price <= budget.discretionary)
+    .sort((a, b) => (b.it.happinessOnBuy ?? 0) - (a.it.happinessOnBuy ?? 0) || a.price - b.price);
+  if (ticketCandidates.length > 0) return goBuy(p, ticketCandidates[0].it.locationId, ticketCandidates[0].it.id, config);
+
+  return null;
+}
+
+/** Rung 10: once survival/career/education/happiness are covered, work every remaining hour toward wealth. */
+export function wealthSweepRung(ctx: TurnContext): Command | null {
+  const { player: p, config } = ctx;
+  if (p.jobId === null) return null;
+  const wealthScore = Math.floor((p.cash + p.bank) / 100);
+  if (wealthScore >= p.goals.wealth) return null;
+  if (p.hoursRemaining <= 0) return null;
   return workCommand(p, config);
 }

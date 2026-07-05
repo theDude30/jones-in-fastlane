@@ -3,7 +3,7 @@ import { defaultConfig } from "@jones/config";
 import { makeEconomy } from "@jones/core";
 import type { GameState } from "@jones/core";
 import { computeBudget } from "../src/budget.js";
-import { eatRung, rentRung, clothesRung, healthRung, employmentRung, depMaintenanceWorkRung, cashFloorWorkRung } from "../src/rungs.js";
+import { eatRung, rentRung, clothesRung, healthRung, employmentRung, depMaintenanceWorkRung, cashFloorWorkRung, educationRung, happinessRung, wealthSweepRung } from "../src/rungs.js";
 import type { TurnContext } from "../src/rungs.js";
 import { solo } from "./testHelpers.js";
 
@@ -196,5 +196,89 @@ describe("cashFloorWorkRung", () => {
     p.insideBuilding = true;
     p.cash = 50; // below the ~150 floor
     expect(cashFloorWorkRung(ctxFor(s))).toEqual({ type: "Work" });
+  });
+});
+
+describe("educationRung", () => {
+  it("does nothing once education 19 (2 degrees) is already met", () => {
+    const s = solo(defaultConfig, { wealth: 0, happiness: 0, education: 19, career: 0 });
+    s.players[0].degrees = ["juniorCollege", "tradeSchool"];
+    expect(educationRung(ctxFor(s))).toBeNull();
+  });
+
+  it("heads to the university to enroll when below the education goal", () => {
+    const s = solo(defaultConfig, { wealth: 0, happiness: 0, education: 19, career: 0 });
+    s.players[0].cash = 5000;
+    expect(educationRung(ctxFor(s))).toEqual({ type: "TravelTo", locationId: "hiTechU" });
+  });
+
+  it("enrolls in a prereq-free degree once at the university", () => {
+    const s = solo(defaultConfig, { wealth: 0, happiness: 0, education: 19, career: 0 });
+    s.players[0].cash = 5000;
+    s.players[0].locationId = "hiTechU";
+    s.players[0].insideBuilding = true;
+    expect(educationRung(ctxFor(s))).toEqual({ type: "Enroll", degreeId: "juniorCollege" });
+  });
+
+  it("studies an existing enrollment instead of enrolling again", () => {
+    const s = solo(defaultConfig, { wealth: 0, happiness: 0, education: 19, career: 0 });
+    s.players[0].locationId = "hiTechU";
+    s.players[0].insideBuilding = true;
+    s.players[0].enrollments = [{ degreeId: "juniorCollege", lessonsRemaining: 10 }];
+    expect(educationRung(ctxFor(s))).toEqual({ type: "Study", degreeId: "juniorCollege" });
+  });
+});
+
+describe("happinessRung", () => {
+  it("does nothing once happiness already clears goal + buffer", () => {
+    const s = solo(defaultConfig, { wealth: 0, happiness: 10, education: 0, career: 0 });
+    s.players[0].happiness = 13; // 10 + buffer(2) + 1
+    expect(happinessRung(ctxFor(s))).toBeNull();
+  });
+
+  it("buys the microwave first (cheapest un-owned durable pump) when discretionary cash allows", () => {
+    const s = solo(defaultConfig, { wealth: 0, happiness: 30, education: 0, career: 0 });
+    s.players[0].cash = 1000; // discretionary well above $220
+    expect(happinessRung(ctxFor(s))).toEqual({ type: "TravelTo", locationId: "zMart" }); // microwaveZMart $220 < socketCity's $330
+  });
+
+  it("falls through to tickets once both durables are owned", () => {
+    const s = solo(defaultConfig, { wealth: 0, happiness: 30, education: 0, career: 0 });
+    const p = s.players[0];
+    p.cash = 1000;
+    p.durables = [
+      { itemId: "microwaveZMart", pricePaid: 220 },
+      { itemId: "refrigeratorZMart", pricePaid: 650 },
+    ];
+    expect(happinessRung(ctxFor(s))).toEqual({ type: "TravelTo", locationId: "zMart" }); // tickets sold at zMart
+  });
+
+  it("does nothing when discretionary cash can't cover any happiness purchase", () => {
+    const s = solo(defaultConfig, { wealth: 0, happiness: 30, education: 0, career: 0 });
+    s.players[0].cash = 0;
+    expect(happinessRung(ctxFor(s))).toBeNull();
+  });
+});
+
+describe("wealthSweepRung", () => {
+  it("does nothing without a job", () => {
+    const s = solo(defaultConfig, { wealth: 30, happiness: 0, education: 0, career: 0 });
+    expect(wealthSweepRung(ctxFor(s))).toBeNull();
+  });
+
+  it("does nothing once the wealth goal is met", () => {
+    const s = solo(defaultConfig, { wealth: 1, happiness: 0, education: 0, career: 0 });
+    s.players[0].jobId = "zMart.clerk";
+    expect(wealthSweepRung(ctxFor(s))).toBeNull(); // floor(200/100)=2 >= 1
+  });
+
+  it("works every remaining hour toward an unmet wealth goal", () => {
+    const s = solo(defaultConfig, { wealth: 30, happiness: 0, education: 0, career: 0 });
+    const p = s.players[0];
+    p.jobId = "zMart.clerk";
+    p.wage = 10;
+    p.locationId = "zMart";
+    p.insideBuilding = true;
+    expect(wealthSweepRung(ctxFor(s))).toEqual({ type: "Work" });
   });
 });
