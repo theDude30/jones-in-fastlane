@@ -13,18 +13,18 @@ function player(locationId: string, insideBuilding: boolean) {
 }
 
 describe("resolveClick", () => {
-  it("travels when clicking a different location while outside", () => {
-    expect(resolveClick("bank", player("zMart", false))).toEqual({
-      type: "TravelTo",
-      locationId: "bank",
-    });
+  it("travels then enters when clicking a different location while outside", () => {
+    expect(resolveClick("bank", player("zMart", false))).toEqual([
+      { type: "TravelTo", locationId: "bank" },
+      { type: "EnterBuilding" },
+    ]);
   });
 
   it("enters when clicking the current location while outside", () => {
-    expect(resolveClick("zMart", player("zMart", false))).toEqual({ type: "EnterBuilding" });
+    expect(resolveClick("zMart", player("zMart", false))).toEqual([{ type: "EnterBuilding" }]);
   });
 
   it("exits when clicking the current location while inside", () => {
-    expect(resolveClick("zMart", player("zMart", true))).toEqual({ type: "ExitBuilding" });
+    expect(resolveClick("zMart", player("zMart", true))).toEqual([{ type: "ExitBuilding" }]);
   });
 });

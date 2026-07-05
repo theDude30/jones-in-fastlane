@@ -33,11 +33,22 @@ export function PixiBoard() {
       const current = stateRef.current;
       if (!current) return;
       const player = current.players[current.currentPlayerIndex];
-      const command = resolveClick(locationId, player);
+      const [command, followUp] = resolveClick(locationId, player);
       const fromLocationId = player.locationId;
       dispatch(command);
       if (command.type === "TravelTo") {
-        boardViewRef.current?.playTravelAnimation(player.id, fromLocationId, locationId, () => {});
+        boardViewRef.current?.playTravelAnimation(player.id, fromLocationId, locationId, () => {
+          if (!followUp) return;
+          // Only enter if travel actually landed the player here — if hours
+          // ran out mid-way, TravelTo silently no-ops and dispatching
+          // EnterBuilding here would wrongly enter wherever they still are.
+          const arrived = useGameStore
+            .getState()
+            .state?.players.find((p) => p.id === player.id);
+          if (arrived?.locationId === locationId && !arrived.insideBuilding) {
+            dispatch(followUp);
+          }
+        });
       }
     }
 
