@@ -60,4 +60,13 @@ describe("emergencyLiquidity", () => {
     s.players[0].stocks.gold = 3;
     expect(emergencyLiquidity(s.players[0], s, defaultConfig)).toEqual({ type: "SellStock", stockId: "gold" });
   });
+
+  it("returns null when owns a T-bill but is not at the bank and doesn't have enough hours to travel there", () => {
+    const s = solo(defaultConfig);
+    s.players[0].locationId = "pawnShop";
+    s.players[0].insideBuilding = false;
+    s.players[0].tBills = 1;
+    s.players[0].hoursRemaining = 0;
+    expect(emergencyLiquidity(s.players[0], s, defaultConfig)).toBeNull();
+  });
 });

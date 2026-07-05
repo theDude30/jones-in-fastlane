@@ -3,13 +3,17 @@ import type { GameConfig } from "@jones/config";
 import { atLocation, isInside } from "./selectors.js";
 import { navigateInto } from "./nav.js";
 
-/** Navigate to the bank and ensure the broker menu is open. Returns a Command to execute next, or null once ready to act (at the bank, inside, broker open). */
-function readyToTradeAtBank(p: PlayerState, config: GameConfig): Command | null {
+/**
+ * Navigate to the bank and open the broker menu if needed.
+ * Returns a Command to run next, `null` when infeasible (give up), or
+ * `true` once ready to sell (at the bank, inside, broker open).
+ */
+function readyToTradeAtBank(p: PlayerState, config: GameConfig): Command | null | true {
   const nav = navigateInto(p, "bank", config);
   if (nav) return nav;
-  if (!atLocation(p, "bank") || !isInside(p)) return null;
+  if (!atLocation(p, "bank") || !isInside(p)) return null; // stuck — give up
   if (!p.brokerMenuOpen) return { type: "OpenBroker" };
-  return null; // ready
+  return true; // ready
 }
 
 /**
@@ -31,15 +35,17 @@ export function emergencyLiquidity(p: PlayerState, state: GameState, config: Gam
   }
 
   if (p.tBills > 0) {
-    const ready = readyToTradeAtBank(p, config);
-    if (ready) return ready;
+    const status = readyToTradeAtBank(p, config);
+    if (status === null) return null;
+    if (status !== true) return status; // status is a Command here
     return { type: "SellTBill" };
   }
 
   const ownedStock = config.stocks.find((s) => p.stocks[s.id] > 0);
   if (ownedStock) {
-    const ready = readyToTradeAtBank(p, config);
-    if (ready) return ready;
+    const status = readyToTradeAtBank(p, config);
+    if (status === null) return null;
+    if (status !== true) return status; // status is a Command here
     return { type: "SellStock", stockId: ownedStock.id };
   }
 
