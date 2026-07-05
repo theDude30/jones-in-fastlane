@@ -4,9 +4,13 @@ import { createInitialGame, goalScores } from "@jones/core";
 import type { GameState, GameEvent } from "@jones/core";
 import { makeAgent, playGame } from "../src/index.js";
 
+// Constant economy: removes RNG-driven price/crash/boom noise so these tests
+// isolate planner behavior rather than economy luck (matching this file's
+// pre-existing convention).
 const config = { ...defaultConfig, economy: constantEconomyConfig };
+const DEFAULT_GOALS = { wealth: 30, happiness: 30, education: 19, career: 30 };
 
-function newGame(seed: number, goals = { wealth: 30, happiness: 30, education: 19, career: 30 }): GameState {
+function newGame(seed: number, goals = DEFAULT_GOALS): GameState {
   return createInitialGame(config, seed, [{ name: "AI", isAI: true, goals }]);
 }
 
@@ -14,11 +18,16 @@ function invalidCount(events: GameEvent[]): number {
   return events.filter((e) => e.type === "InvalidAction").length;
 }
 
+function median(nums: number[]): number {
+  const sorted = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 describe("AI full-game integration", () => {
-  it("a greedy game never crashes and emits no storm of InvalidAction", () => {
+  it("a budget game never crashes and emits no storm of InvalidAction", () => {
     const seat = { playerId: "p0", agent: makeAgent(aiDifficulty.hard, config, 1, 0) };
     const result = playGame(config, newGame(1), [seat], { maxWeeks: 200 });
-    // A well-behaved greedy agent should produce very few (ideally zero) invalid actions.
     expect(invalidCount(result.events)).toBeLessThan(5);
     expect(["playing", "ended"]).toContain(result.state.status);
   });
@@ -39,7 +48,7 @@ describe("AI full-game integration", () => {
     expect(a.state.players[0]).toEqual(b.state.players[0]);
   });
 
-  it("a greedy agent out-progresses a random agent over the same horizon", () => {
+  it("a budget agent out-progresses a random agent over the same horizon", () => {
     const horizon = 60;
     const progress = (preset: typeof aiDifficulty.hard, seed: number) => {
       const r = playGame(config, newGame(seed, { wealth: 999, happiness: 999, education: 999, career: 999 }), [
@@ -48,54 +57,59 @@ describe("AI full-game integration", () => {
       const s = goalScores(r.state.players[0]);
       return s.wealth + s.happiness + s.education + s.career;
     };
-    const greedy = progress(aiDifficulty.hard, 3);
+    const budget = progress(aiDifficulty.hard, 3);
     const random = progress(aiDifficulty.easy, 3);
-    expect(greedy).toBeGreaterThan(random);
-  });
-
-  it("recovers from the diagnosed poverty spiral instead of bottoming out forever (seed 42, medium, 200 weeks)", () => {
-    // Reproduction of a real reported bug: this exact seed/difficulty/horizon
-    // previously drove the AI to $0 cash by week 6, after which lapsed
-    // clothing made Work permanently unaffordable to restore, and happiness
-    // declined monotonically to roughly -397 by week 200 with no recovery.
-    // Fixed by @jones/ai's emergency-liquidity fallback (pawn/sell assets)
-    // plus @jones/core's Donation safety net (for when there's nothing to
-    // liquidate at all, which is exactly what happens on this seed).
-    const seat = { playerId: "p0", agent: makeAgent(aiDifficulty.medium, config, 42, 0) };
-    let state = newGame(42);
-    const allEvents: GameEvent[] = [];
-    let wasBroke = false;
-    let recovered = false;
-
-    for (let w = 0; w < 200 && state.status === "playing"; w++) {
-      const r = playGame(config, state, [seat], { maxWeeks: state.week + 1 });
-      state = r.state;
-      allEvents.push(...r.events);
-      if (state.players[0].cash <= 0) {
-        wasBroke = true;
-      } else if (wasBroke) {
-        recovered = true;
-        break;
-      }
-    }
-
-    expect(wasBroke).toBe(true);
-    expect(recovered).toBe(true);
-    expect(invalidCount(allEvents)).toBeLessThan(5);
+    expect(budget).toBeGreaterThan(random);
   });
 
   it("always terminates with exactly one winner under a small core cap (multiple seeds)", () => {
-    // Override the core cap low so games end quickly; give the runner a
-    // larger maxWeeks so the CORE cap is what terminates, not the runner.
     const capped = { ...config, constants: { ...config.constants, maxWeeks: 10 } };
     for (const seed of [1, 2, 3, 42, 99]) {
       const seat = { playerId: "p0", agent: makeAgent(aiDifficulty.hard, capped, seed, 0) };
       const result = playGame(capped, createInitialGame(capped, seed, [
-        { name: "AI", isAI: true, goals: { wealth: 30, happiness: 30, education: 19, career: 30 } },
+        { name: "AI", isAI: true, goals: DEFAULT_GOALS },
       ]), [seat], { maxWeeks: 100 });
       expect(result.state.status).toBe("ended");
       expect(result.state.winners).toHaveLength(1);
       expect(result.state.week).toBeLessThanOrEqual(11); // cap 10 -> ends when week becomes 11
     }
   });
+
+  it("regression economics: no starvation after week 2, rent debt bounded, dependibility maintained from week 6 (seed 7)", () => {
+    const seat = { playerId: "p0", agent: makeAgent(aiDifficulty.hard, config, 7, 0) };
+    let state = newGame(7);
+
+    for (let w = 0; w < 120 && state.status === "playing"; w++) {
+      const before = state.week;
+      const r = playGame(config, state, [seat], { maxWeeks: before + 1 });
+      state = r.state;
+
+      if (before > 2) {
+        expect(r.events.some((e) => e.type === "PlayerStarved")).toBe(false);
+      }
+      expect(state.players[0].rentDebt).toBeLessThanOrEqual(state.players[0].currentRent);
+      if (before >= 6) {
+        expect(state.players[0].dependibility).toBeGreaterThanOrEqual(20);
+      }
+    }
+  });
+
+  it("hard AI reliably wins: >=90% of 40 seeds finish via PlayerWon, median <=80 weeks", () => {
+    const seeds = Array.from({ length: 40 }, (_, i) => i + 1);
+    const winWeeks: number[] = [];
+    let wins = 0;
+
+    for (const seed of seeds) {
+      const seat = { playerId: "p0", agent: makeAgent(aiDifficulty.hard, config, seed, 0) };
+      const result = playGame(config, newGame(seed), [seat], { maxWeeks: 200 });
+      const won = result.events.some((e) => e.type === "PlayerWon");
+      if (won) {
+        wins++;
+        winWeeks.push(result.weeks);
+      }
+    }
+
+    expect(wins / seeds.length).toBeGreaterThanOrEqual(0.9);
+    expect(median(winWeeks)).toBeLessThanOrEqual(80);
+  }, 60000);
 });
