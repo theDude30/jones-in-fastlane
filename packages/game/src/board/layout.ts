@@ -49,6 +49,72 @@ export const boardPathOrder: string[] = [...defaultConfig.locations]
   .sort((a, b) => a.ringIndex - b.ringIndex)
   .map((l) => l.id);
 
+// --- Road centerline, for animating travel along the drawn road instead of
+// a straight line between two buildings. Same stadium geometry as
+// `boardLayout`'s derivation, but at the road's actual centerline radius
+// (the dashed line in town-backdrop.png), measured in the same 2000x1121
+// reference frame: semicircle centers at pixel (520,555)/(1480,555),
+// centerline radius 375px (vs. the 455px buildings sit at).
+const ROAD_IMG_W = 2000;
+const ROAD_IMG_H = 1121;
+const ROAD_CX1 = 520;
+const ROAD_CX2 = 1480;
+const ROAD_CY = 555;
+const ROAD_RADIUS = 375;
+const ROAD_STRAIGHT_LEN = ROAD_CX2 - ROAD_CX1;
+const ROAD_ARC_LEN = Math.PI * ROAD_RADIUS;
+const ROAD_PERIMETER = 2 * ROAD_STRAIGHT_LEN + 2 * ROAD_ARC_LEN;
+
+/**
+ * A point on the road's centerline at arc-length fraction `s` (0..1 covers
+ * the whole loop once; wraps outside that range), as a `boardLayout`-style
+ * fraction point. `s = 0` is the top straight's left end, matching where
+ * `boardLayout`'s own arc-length derivation started.
+ */
+export function roadPointAt(s: number): BoardPoint {
+  let len = ((s % 1) + 1) % 1 * ROAD_PERIMETER;
+  let x: number;
+  let y: number;
+  if (len <= ROAD_STRAIGHT_LEN) {
+    x = ROAD_CX1 + len;
+    y = ROAD_CY - ROAD_RADIUS;
+  } else if ((len -= ROAD_STRAIGHT_LEN) <= ROAD_ARC_LEN) {
+    const angle = ((-90 + (len / ROAD_ARC_LEN) * 180) * Math.PI) / 180;
+    x = ROAD_CX2 + ROAD_RADIUS * Math.cos(angle);
+    y = ROAD_CY + ROAD_RADIUS * Math.sin(angle);
+  } else if ((len -= ROAD_ARC_LEN) <= ROAD_STRAIGHT_LEN) {
+    x = ROAD_CX2 - len;
+    y = ROAD_CY + ROAD_RADIUS;
+  } else {
+    len -= ROAD_STRAIGHT_LEN;
+    const angle = ((90 + (len / ROAD_ARC_LEN) * 180) * Math.PI) / 180;
+    x = ROAD_CX1 + ROAD_RADIUS * Math.cos(angle);
+    y = ROAD_CY + ROAD_RADIUS * Math.sin(angle);
+  }
+  return { x: x / ROAD_IMG_W, y: y / ROAD_IMG_H };
+}
+
+/** Each location's position along the road as an arc-length fraction (0..1), matching its ringIndex. */
+export const roadFractionByLocation: Record<string, number> = Object.fromEntries(
+  defaultConfig.locations.map((loc) => [loc.id, loc.ringIndex / defaultConfig.constants.ringSize]),
+);
+
+/**
+ * The shorter-direction arc-length fraction to travel from `fromId` to
+ * `toId` along the ring — positive means increasing ringIndex (the
+ * direction `roadPointAt`'s `s` increases in), negative means decreasing.
+ * Mirrors `@jones/core`'s `travelHours` shortest-path choice exactly, so the
+ * animation always travels the same direction the hours were charged for.
+ */
+export function shortestRoadDelta(fromId: string, toId: string): number {
+  const size = defaultConfig.constants.ringSize;
+  const from = defaultConfig.locations.find((l) => l.id === fromId)!.ringIndex;
+  const to = defaultConfig.locations.find((l) => l.id === toId)!.ringIndex;
+  const forward = ((to - from) % size + size) % size;
+  const backward = size - forward;
+  return (forward <= backward ? forward : -backward) / size;
+}
+
 /**
  * Fits a 16:9 (by default) board into a containerWidth x containerHeight
  * area, preserving aspect ratio (letterboxed, never stretched/distorted).

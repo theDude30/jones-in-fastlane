@@ -1,7 +1,15 @@
 import { Assets, Container, Graphics, Sprite, Text, Ticker } from "pixi.js";
 import { defaultConfig } from "@jones/config";
 import type { GameState } from "@jones/core";
-import { BOARD_ASPECT, boardLayout, computeBoardRect, toPixelPosition } from "./layout.js";
+import {
+  BOARD_ASPECT,
+  boardLayout,
+  computeBoardRect,
+  roadFractionByLocation,
+  roadPointAt,
+  shortestRoadDelta,
+  toPixelPosition,
+} from "./layout.js";
 import type { BoardRect } from "./layout.js";
 import { buildingColor } from "./buildingStyles.js";
 import { clusterPlayersByLocation, fanOffsets } from "./playerClusters.js";
@@ -21,10 +29,6 @@ const BACKDROP_URL = "/board/town-backdrop.png";
 // computeBoardRect, so cards/tokens must shrink with it via a scale
 // transform, or they visually overlap at small sizes.
 const REFERENCE_BOARD_WIDTH = 640;
-
-function tokenY(centerY: number, scale: number): number {
-  return centerY + (CARD_HEIGHT / 2 + TOKEN_RADIUS) * scale;
-}
 
 /**
  * Owns every Pixi object on the board: the backdrop, building cards, and
@@ -126,14 +130,19 @@ export class BoardView {
     this.animatingPlayerId = playerId;
     const scale = this.scale;
     const seatIndex = Number(playerId.slice(1));
-    const from = toPixelPosition(boardLayout[fromLocationId], this.rect);
-    const to = toPixelPosition(boardLayout[toLocationId], this.rect);
+    // Animate along the road's actual drawn centerline, not a straight line
+    // between the two buildings — `shortestRoadDelta` picks the same
+    // direction (and matching hour cost) @jones/core's travelHours already
+    // charged, so the trip a player sees always matches what they paid for.
+    const fromFraction = roadFractionByLocation[fromLocationId];
+    const delta = shortestRoadDelta(fromLocationId, toLocationId);
+    const start = toPixelPosition(roadPointAt(fromFraction), this.rect);
 
     const token = new Graphics();
     token.circle(0, 0, TOKEN_RADIUS).fill(SEAT_COLORS[seatIndex] ?? "#888888");
     token.stroke({ width: 2, color: "#ffffff" });
     token.scale.set(scale);
-    token.position.set(from.x, tokenY(from.y, scale));
+    token.position.set(start.x, start.y);
     this.animationLayer.addChild(token);
 
     // Redraw the static token layer now, excluding the animating player, so
@@ -144,7 +153,8 @@ export class BoardView {
     const tick = (ticker: Ticker) => {
       elapsed += ticker.deltaMS;
       const t = Math.min(1, elapsed / TRAVEL_DURATION_MS);
-      token.position.set(from.x + (to.x - from.x) * t, tokenY(from.y + (to.y - from.y) * t, scale));
+      const point = toPixelPosition(roadPointAt(fromFraction + delta * t), this.rect);
+      token.position.set(point.x, point.y);
       if (t >= 1) {
         this.cancelActiveAnimation();
         if (this.lastState) this.drawTokens(this.lastState);
@@ -208,7 +218,10 @@ export class BoardView {
     const visiblePlayerIds = new Set<string>();
     for (const [locationId, players] of clusters) {
       const visible = players.filter((p) => p.id !== this.animatingPlayerId);
-      const { x, y } = toPixelPosition(boardLayout[locationId], this.rect);
+      // On the road at this location's stop, not on the building card —
+      // matches where playTravelAnimation starts and ends, so there's no
+      // visual jump between arriving and coming to rest.
+      const { x, y } = toPixelPosition(roadPointAt(roadFractionByLocation[locationId]), this.rect);
       const offsets = fanOffsets(visible.length, TOKEN_SPACING * scale);
       visible.forEach((player, i) => {
         visiblePlayerIds.add(player.id);
@@ -223,7 +236,7 @@ export class BoardView {
         }
         token.visible = true;
         token.scale.set(scale);
-        token.position.set(x + offsets[i], tokenY(y, scale));
+        token.position.set(x + offsets[i], y);
       });
     }
     for (const [playerId, token] of this.playerTokens) {
