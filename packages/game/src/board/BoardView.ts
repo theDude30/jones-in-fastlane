@@ -1,7 +1,7 @@
 import { Assets, Container, Graphics, Sprite, Text, Ticker } from "pixi.js";
 import { defaultConfig } from "@jones/config";
 import type { GameState } from "@jones/core";
-import { BOARD_ASPECT, boardLayout, boardPathOrder, computeBoardRect, toPixelPosition } from "./layout.js";
+import { BOARD_ASPECT, boardLayout, computeBoardRect, toPixelPosition } from "./layout.js";
 import type { BoardRect } from "./layout.js";
 import { buildingColor } from "./buildingStyles.js";
 import { clusterPlayersByLocation, fanOffsets } from "./playerClusters.js";
@@ -27,15 +27,18 @@ function tokenY(centerY: number, scale: number): number {
 }
 
 /**
- * Owns every Pixi object on the board: building cards, the connecting path,
- * and player tokens. `syncState` is the one-way sync point from game state
- * to the rendered scene — this class never reads from the Zustand store
+ * Owns every Pixi object on the board: the backdrop, building cards, and
+ * player tokens. `syncState` is the one-way sync point from game state to
+ * the rendered scene — this class never reads from the Zustand store
  * itself, only from whatever state `PixiBoard.tsx` hands it.
+ *
+ * The connecting travel path is drawn by the backdrop art itself (the road
+ * loop in town-backdrop.png), not by this class — building positions in
+ * `boardLayout` are calibrated to sit just outside that drawn road.
  */
 export class BoardView {
   private backdropLayer = new Container();
   private backdropSprite: Sprite | null = null;
-  private pathLayer = new Graphics();
   private buildingsLayer = new Container();
   private tokensLayer = new Container();
   private animationLayer = new Container();
@@ -50,7 +53,6 @@ export class BoardView {
 
   constructor(stage: Container, private onLocationClick: (locationId: string) => void) {
     stage.addChild(this.backdropLayer);
-    stage.addChild(this.pathLayer);
     stage.addChild(this.buildingsLayer);
     stage.addChild(this.tokensLayer);
     stage.addChild(this.animationLayer);
@@ -98,7 +100,6 @@ export class BoardView {
   resize(width: number, height: number): void {
     this.rect = computeBoardRect(width, height, BOARD_ASPECT);
     this.layoutBackdrop();
-    this.drawPath();
     if (this.lastState) this.syncState(this.lastState);
   }
 
@@ -159,7 +160,6 @@ export class BoardView {
     this.destroyed = true;
     this.cancelActiveAnimation();
     this.backdropLayer.destroy({ children: true });
-    this.pathLayer.destroy();
     this.buildingsLayer.destroy({ children: true });
     this.tokensLayer.destroy({ children: true });
     this.animationLayer.destroy({ children: true });
@@ -177,15 +177,6 @@ export class BoardView {
       this.activeAnimationToken = null;
     }
     this.animatingPlayerId = null;
-  }
-
-  private drawPath(): void {
-    this.pathLayer.clear();
-    const points = boardPathOrder.map((id) => toPixelPosition(boardLayout[id], this.rect));
-    this.pathLayer.moveTo(points[0].x, points[0].y);
-    for (const point of points.slice(1)) this.pathLayer.lineTo(point.x, point.y);
-    this.pathLayer.lineTo(points[0].x, points[0].y);
-    this.pathLayer.stroke({ width: 3, color: "#bbbbbb" });
   }
 
   private drawBuildingCards(state: GameState): void {
