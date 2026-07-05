@@ -13,11 +13,11 @@ function game(): GameState {
 }
 
 describe("makeAgent", () => {
-  it("builds a random agent for the easy preset and a greedy agent otherwise", () => {
+  it("builds a random agent for the easy preset and a budget agent otherwise", () => {
     const easy = makeAgent(aiDifficulty.easy, defaultConfig, 1, 0);
     const hard = makeAgent(aiDifficulty.hard, defaultConfig, 1, 0);
     expect(easy.constructor.name).toBe("RandomPlanner");
-    expect(hard.constructor.name).toBe("GreedyPlanner");
+    expect(hard.constructor.name).toBe("BudgetPlanner");
   });
 });
 
