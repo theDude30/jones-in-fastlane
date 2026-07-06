@@ -74,6 +74,10 @@ export function PixiBoard() {
         return;
       }
 
+      // Canvas defaults to inline display, which leaves a few px of
+      // baseline gap below it inside the container — enough to push the
+      // page a hair past 100vh and force a spurious scrollbar.
+      app.canvas.style.display = "block";
       containerEl.appendChild(app.canvas);
       boardView = new BoardView(app.stage, handleLocationClick, () => dispatch({ type: "EndTurn" }));
       boardViewRef.current = boardView;
@@ -121,5 +125,5 @@ export function PixiBoard() {
     boardView?.syncState(state);
   }, [state]);
 
-  return <div ref={containerRef} style={{ width: "100%", height: 360 }} />;
+  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }

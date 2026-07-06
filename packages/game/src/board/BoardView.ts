@@ -45,12 +45,12 @@ const CUSTOM_BUILDING_ART: Partial<Record<string, { url: string; size: number; v
 // match whatever heading angle the car is actually facing on the road.
 const CAR_NOSE_OFFSET = Math.PI / 2;
 
-// Card/token pixel sizes above are tuned for the board at this width — the
-// width it gets whenever the container is at least 360px tall (16:9 against
-// the fixed 360px board height most viewports hit). Narrower containers
-// (e.g. a narrow phone) get less board width than this from
-// computeBoardRect, so cards/tokens must shrink with it via a scale
-// transform, or they visually overlap at small sizes.
+// Card/token pixel sizes above are tuned for the board at this reference
+// width. The board container fills whatever space its parent gives it (the
+// full viewport height on the play screen) and computeBoardRect letterboxes
+// a 16:9 board into that space, so the actual rendered board width varies
+// with the screen — cards/tokens scale via the `scale` transform below to
+// match, instead of visually overlapping or shrinking to illegibility.
 const REFERENCE_BOARD_WIDTH = 640;
 
 // The status HUD sits in the board's open infield, dead center of the road
