@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { useGameStore } from "../../src/store/gameStore.js";
 import { EmploymentOfficeScreen } from "../../src/screens/panels/EmploymentOfficeScreen.js";
 
@@ -62,5 +62,24 @@ describe("EmploymentOfficeScreen", () => {
     render(<EmploymentOfficeScreen />);
     fireEvent.click(screen.getByText("Leave"));
     expect(useGameStore.getState().state!.players[0].insideBuilding).toBe(false);
+  });
+
+  it("clears the HIRED reaction on its own after a few seconds, instead of staying up forever", () => {
+    vi.useFakeTimers();
+    try {
+      atEmploymentOffice();
+      render(<EmploymentOfficeScreen />);
+      fireEvent.click(screen.getByText("Monolith Burgers"));
+      fireEvent.click(screen.getAllByText("Apply")[0]); // Cook, alwaysApproved
+      expect(screen.getByText(/HIRED/)).toBeInTheDocument();
+
+      act(() => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(screen.queryByText(/HIRED/)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

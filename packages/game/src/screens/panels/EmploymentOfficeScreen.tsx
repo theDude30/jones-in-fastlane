@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { makeEconomy } from "@jones/core";
 import type { PlayerState } from "@jones/core";
@@ -8,6 +8,12 @@ import "./EmploymentOfficeScreen.css";
 
 const CONFETTI_COLORS = ["#0a66c2", "#e0524a", "#2eb872", "#caa12e", "#ffffff"];
 const CONFETTI_PIECE_COUNT = 60;
+// How long a hire/reject reaction (manager mood, confetti, red flash, and
+// the outcome message) stays up before resetting to neutral on its own —
+// otherwise it only ever cleared on navigation (switching company or going
+// back), so leaving it showing and then coming back to the same job list
+// left the reaction frozen there indefinitely.
+const OUTCOME_DISPLAY_MS = 2600;
 
 /** A one-shot confetti burst covering the whole panel, not just the manager
  * portrait — remounted (via the parent's `key`) every time a hire lands, so
@@ -121,6 +127,12 @@ export function EmploymentOfficeScreen() {
   // wouldn't otherwise give React a reason to re-key the effect.
   const [outcomeSeq, setOutcomeSeq] = useState(0);
 
+  useEffect(() => {
+    if (outcomeSeq === 0) return;
+    const timer = setTimeout(() => setOutcome(null), OUTCOME_DISPLAY_MS);
+    return () => clearTimeout(timer);
+  }, [outcomeSeq]);
+
   if (!state) return null;
   const currentPlayerIndex = state.currentPlayerIndex;
   const p = state.players[currentPlayerIndex];
@@ -165,6 +177,7 @@ export function EmploymentOfficeScreen() {
       setOutcomeSeq((n) => n + 1);
     } else if (noTime) {
       setOutcome({ jobId: job.id, status: "no-time" });
+      setOutcomeSeq((n) => n + 1);
     }
   }
 
