@@ -1,9 +1,57 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { makeEconomy } from "@jones/core";
 import type { PlayerState } from "@jones/core";
 import type { JobDef } from "@jones/config";
 import { useGameStore } from "../../store/gameStore.js";
 import "./EmploymentOfficeScreen.css";
+
+const CONFETTI_COLORS = ["#0a66c2", "#e0524a", "#2eb872", "#caa12e", "#ffffff"];
+const CONFETTI_PIECE_COUNT = 60;
+
+/** A one-shot confetti burst covering the whole panel, not just the manager
+ * portrait — remounted (via the parent's `key`) every time a hire lands, so
+ * repeat hires replay the burst instead of the animation staying frozen at
+ * its end state. */
+function ConfettiBurst() {
+  const pieces = useMemo(
+    () =>
+      Array.from({ length: CONFETTI_PIECE_COUNT }, () => ({
+        left: Math.random() * 100,
+        delay: Math.random() * 0.4,
+        duration: 1.6 + Math.random() * 1.2,
+        color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+        rotate: Math.random() * 360,
+        drift: (Math.random() - 0.5) * 140,
+      })),
+    [],
+  );
+  return (
+    <div className="eo-confetti" aria-hidden="true">
+      {pieces.map((piece, i) => (
+        <span
+          key={i}
+          className="eo-confetti-piece"
+          style={
+            {
+              left: `${piece.left}%`,
+              animationDelay: `${piece.delay}s`,
+              animationDuration: `${piece.duration}s`,
+              backgroundColor: piece.color,
+              transform: `rotate(${piece.rotate}deg)`,
+              "--eo-confetti-drift": `${piece.drift}px`,
+            } as CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
+/** A brief red flash across the whole panel on a rejection. */
+function RejectFlash() {
+  return <div className="eo-reject-flash" aria-hidden="true" />;
+}
 
 type Outcome =
   | { jobId: string; status: "hired"; wage: number }
@@ -67,6 +115,11 @@ export function EmploymentOfficeScreen() {
   const dispatch = useGameStore((s) => s.dispatch);
   const [selectedEmployerId, setSelectedEmployerId] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  // Bumped on every applied outcome so the confetti/flash overlays remount
+  // (and thus replay their animation) even when the same job is re-applied
+  // to with the same result — a plain outcome object with unchanged fields
+  // wouldn't otherwise give React a reason to re-key the effect.
+  const [outcomeSeq, setOutcomeSeq] = useState(0);
 
   if (!state) return null;
   const currentPlayerIndex = state.currentPlayerIndex;
@@ -102,12 +155,14 @@ export function EmploymentOfficeScreen() {
 
     if (applied && applied.type === "JobApplied") {
       setOutcome({ jobId: job.id, status: "hired", wage: applied.wage });
+      setOutcomeSeq((n) => n + 1);
     } else if (denied && denied.type === "JobDenied") {
       const reasons =
         denied.reason === "stats"
           ? unmetRequirements(job, freshPlayer, depGateActive, degreeName)
           : ["didn't get the offer this time — the odds aren't guaranteed, feel free to try again"];
       setOutcome({ jobId: job.id, status: "rejected", reasons });
+      setOutcomeSeq((n) => n + 1);
     } else if (noTime) {
       setOutcome({ jobId: job.id, status: "no-time" });
     }
@@ -200,6 +255,8 @@ export function EmploymentOfficeScreen() {
         </div>
         <ManagerPanel mood={managerMood} />
       </div>
+      {managerMood === "hired" && <ConfettiBurst key={outcomeSeq} />}
+      {managerMood === "rejected" && <RejectFlash key={outcomeSeq} />}
     </div>
   );
 }

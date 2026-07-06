@@ -55,6 +55,27 @@
   min-width: 0;
   overflow-y: auto;
   padding: 8px 12px 14px;
+  /* Thin, themed scrollbar instead of the default chunky one — most
+     noticeable (and ugliest) on a narrow mobile-width viewport. */
+  scrollbar-width: thin;
+  scrollbar-color: #c7c7c7 transparent;
+}
+
+.eo-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.eo-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.eo-menu::-webkit-scrollbar-thumb {
+  background: #c7c7c7;
+  border-radius: 3px;
+}
+
+.eo-menu::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
 }
 
 .eo-manager {
@@ -297,4 +318,58 @@
 
 .eo-apply:hover {
   background: #004182;
+}
+
+/* Whole-panel reactions — layered above the header/menu/manager so a hire
+   or rejection reads at a glance, not just from the small manager portrait. */
+
+.eo-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.eo-confetti-piece {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 14px;
+  opacity: 0.9;
+  animation-name: eo-confetti-fall;
+  animation-timing-function: ease-in;
+  animation-fill-mode: forwards;
+}
+
+@keyframes eo-confetti-fall {
+  0% {
+    transform: translate(0, -20px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--eo-confetti-drift, 0px), 420px) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+.eo-reject-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  background: radial-gradient(circle, rgba(220, 38, 38, 0.35) 0%, rgba(220, 38, 38, 0.15) 60%, rgba(220, 38, 38, 0) 100%);
+  animation: eo-reject-pulse 900ms ease-out forwards;
+}
+
+@keyframes eo-reject-pulse {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
