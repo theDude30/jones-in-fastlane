@@ -35,6 +35,9 @@ const CAR_URL = "/board/car.png";
 // container. employmentOffice sits at y=0.901, a hair from the bottom.
 const CUSTOM_BUILDING_ART: Partial<Record<string, { url: string; size: number; verticalOffset: number }>> = {
   employmentOffice: { url: "/board/employment-office.png", size: 112, verticalOffset: -26 },
+  // hiTechU sits at y=0.868 — closer to the bottom edge than most
+  // locations, needing the same upward nudge as employmentOffice.
+  hiTechU: { url: "/board/hi-tech-u.png", size: 112, verticalOffset: -14 },
 };
 
 // The car artwork's nose points toward the bottom of its source image (+y,
