@@ -78,8 +78,8 @@ play are designed-for and built afterward.
 | **Guaranteed termination** | Complete | A `maxWeeks` cap (default 156) ends any game that hasn't produced a goals-based winner, awarding it on points — every headless game now provably terminates. |
 | **M4a — State bridge & app shell** | Complete | `@jones/game` package: Zustand store bridges the UI to `@jones/core`'s `reduce`; a minimal debug screen proves the full human command-dispatch loop end-to-end. |
 | **M4c — Action screens** | Complete | Real per-location screens (stores, bank/broker, pawn shop, university, employment office, rent office, home) replacing the debug screen's generic button list — every `@jones/core` command is now reachable from the UI. |
-| **M4 — PixiJS board + AI wiring** | Complete | A clickable PixiJS board (13 locations, travel-path connectors, seat-colored tokens, travel animation) wired to `@jones/game`'s human/AI seats — solo-vs-AI is fully playable end-to-end, one click travels to and enters a building. |
-| **M4 — Placeholder art, audio, hotseat** | Not started | Current board/token/screen art is flat-colored placeholders, not the final 4K-ready assets. No audio (`howler.js` is a planned dependency, not yet added). Only one human seat is supported today (`gameStore.ts` always creates exactly one `isAI: false` player) — hotseat (multiple human players on one device) isn't implemented. **These are what's left before M4/MVP is done.** |
+| **M4 — PixiJS board + AI wiring** | Complete | A clickable PixiJS board (13 locations on an illustrated town backdrop with a drawn road loop, per-player car tokens with travel animation) wired to `@jones/game`'s human/AI seats — solo-vs-AI is fully playable end-to-end, one click travels to and enters a building. The board fills the full viewport responsively and shows an on-board status plaque (time left, cash, week, work location) with an End Turn button. |
+| **M4 — Placeholder art, audio, hotseat** | In progress | Employment Office and Hi-Tech U have illustrated buildings and bespoke redesigned action screens (a LinkedIn-style job board with an animated hiring-manager reaction, and a futuristic university tablet); the other 11 locations are still flat-colored placeholder cards, not final 4K-ready assets. Player tokens are illustrated cars (tinted per seat), but no other character art exists. No audio (`howler.js` is a planned dependency, not yet added). Only one human seat is supported today (`gameStore.ts` always creates exactly one `isAI: false` player) — hotseat (multiple human players on one device) isn't implemented. **These are what's left before M4/MVP is done.** |
 | **M5 — Mobile packaging** | Future | Capacitor iOS/Android builds for the App Store / Play Store. |
 | **M6 — Online play** | Future | Server-authoritative networked multiplayer + AI-agent-as-player, added on the existing command-driven core. |
 
@@ -108,11 +108,14 @@ pnpm test           # run the full test suite (logic packages + @jones/game)
 pnpm typecheck      # type-check every package
 ```
 
-**The app (`@jones/game`):** a Vite + React dev server rendering a clickable PixiJS
-board (13 locations, seat-colored tokens, travel animation) plus per-location action
-screens for every game command. Solo-vs-AI is fully playable end-to-end. Board,
-building, and character art is still flat-colored placeholders — final art, audio,
-and hotseat (multiple human players) are the remaining M4 work.
+**The app (`@jones/game`):** a Vite + React dev server rendering a clickable,
+responsive PixiJS board (13 locations on an illustrated town backdrop, car tokens,
+travel animation, an on-board status plaque with an End Turn button) plus
+per-location action screens for every game command. Solo-vs-AI is fully playable
+end-to-end. Employment Office and Hi-Tech U have illustrated buildings and
+redesigned screens; the other 11 locations, and all character art besides the car
+and hiring-manager, are still flat-colored placeholders — final art, audio, and
+hotseat (multiple human players) are the remaining M4 work.
 
 ```bash
 pnpm --filter @jones/game dev    # starts the dev server (prints the local URL)
@@ -135,7 +138,16 @@ rent/housing mechanics, wage garnishment, a shared pawn shop, loan repayment, au
 rent/loan due-date processing, a headless AI opponent (`BudgetPlanner`, winning 40/40
 test seeds) that's also playable live on a clickable board, Cooking Bonus/Starvation/
 Spoiled Food/Doctor Visit/Relax, and a `@jones/game` app with real per-location action
-screens covering every command. 400 tests passing.
+screens covering every command. 412 tests passing.
 
-Remaining before M4/MVP is done: final 4K-ready art (board, buildings, characters),
-audio, and hotseat (multiple human players on one device).
+The board is now an illustrated town backdrop with a drawn road loop, per-player car
+tokens, and travel animation; it fills the full viewport responsively at any screen
+size, with an on-board status plaque (time left, cash, week, work location) and an
+End Turn button — the earlier fixed-size board and debug screen below it are gone.
+Employment Office and Hi-Tech U have illustrated buildings and bespoke redesigned
+screens (a LinkedIn-style job board with an animated hiring-manager reaction, and a
+futuristic university tablet with in-place job actions).
+
+Remaining before M4/MVP is done: final 4K-ready art for the other 11 buildings and
+all character art besides the car and hiring-manager, audio, and hotseat (multiple
+human players on one device).
