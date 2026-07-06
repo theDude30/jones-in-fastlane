@@ -24,7 +24,7 @@ export function LocationScreen() {
   return (
     <div data-testid="location-screen">
       {location.types.includes("store") && <StoreScreen locationId={location.id} />}
-      {isWorkplaceHere && <WorkplaceScreen />}
+      {isWorkplaceHere && location.id !== "hiTechU" && <WorkplaceScreen />}
       {location.id === "bank" && <BankScreen />}
       {location.id === "pawnShop" && <PawnShopScreen />}
       {location.id === "hiTechU" && <UniversityScreen />}

@@ -48,6 +48,40 @@ export function UniversityScreen() {
     }
   }
 
+  function handleWork() {
+    dispatch({ type: "Work" });
+    const events = useGameStore.getState().lastEvents;
+    const noTime = events.find((e) => e.type === "NotEnoughTime" && e.action === "Work");
+    if (noTime) {
+      setActionError("Not enough hours left today to work.");
+    }
+  }
+
+  function handleRequestRaise() {
+    dispatch({ type: "RequestRaise" });
+    const events = useGameStore.getState().lastEvents;
+    const denied = events.find((e) => e.type === "RaiseDenied");
+    if (denied && denied.type === "RaiseDenied") {
+      setActionError(
+        denied.reason === "stats"
+          ? "Your dependability isn't high enough yet for a raise."
+          : "No raise available right now — come back after your wage falls behind the market rate.",
+      );
+    }
+  }
+
+  function handleQuitJob() {
+    dispatch({ type: "QuitJob" });
+  }
+
+  // Hi-Tech U is both a service and a workplace location (janitor, teacher,
+  // professor) — its job actions render inside this tablet instead of the
+  // generic WorkplaceScreen, which LocationScreen skips for this location
+  // specifically since it would otherwise render underneath this overlay,
+  // hidden behind the dimmed backdrop and unreachable.
+  const job = p.jobId !== null ? config.jobs.find((j) => j.id === p.jobId) : undefined;
+  const isEmployedHere = job !== undefined && job.locationId === "hiTechU";
+
   const inProgress = config.degrees.filter((d) => p.enrollments.some((e) => e.degreeId === d.id));
   const completed = config.degrees.filter((d) => p.degrees.includes(d.id));
   const available = config.degrees.filter(
@@ -71,9 +105,37 @@ export function UniversityScreen() {
             </button>
           </header>
 
+          <div className="ht-status">
+            <span className="ht-status-label">Time Left</span>
+            <span className="ht-status-value">{p.hoursRemaining.toFixed(1)}h</span>
+          </div>
+
           {actionError && <p className="ht-error">{actionError}</p>}
 
           <div className="ht-body">
+            {isEmployedHere && (
+              <section className="ht-section">
+                <h3 className="ht-section-title">Your Job</h3>
+                <div className="ht-card">
+                  <div className="ht-card-row">
+                    <span className="ht-card-name">{job.title}</span>
+                    <span className="ht-card-meta">${p.wage.toFixed(2)}/hr</span>
+                  </div>
+                  <div className="ht-job-actions">
+                    <button className="ht-action" onClick={handleWork}>
+                      Work
+                    </button>
+                    <button className="ht-action ht-action--outline" onClick={handleRequestRaise}>
+                      Request Raise
+                    </button>
+                    <button className="ht-action ht-action--outline" onClick={handleQuitJob}>
+                      Quit Job
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {inProgress.length > 0 && (
               <section className="ht-section">
                 <h3 className="ht-section-title">In Progress</h3>

@@ -86,4 +86,49 @@ describe("UniversityScreen", () => {
     fireEvent.click(screen.getByText("Leave"));
     expect(useGameStore.getState().state!.players[0].insideBuilding).toBe(false);
   });
+
+  it("shows hours remaining as a Time Left readout", () => {
+    atUniversity();
+    useGameStore.setState((s) => {
+      s.state!.players[0].hoursRemaining = 12.5;
+      return { state: s.state };
+    });
+    render(<UniversityScreen />);
+    expect(screen.getByText("12.5h")).toBeInTheDocument();
+  });
+
+  it("shows a Your Job section with Work/Raise/Quit actions when employed here", () => {
+    atUniversity();
+    useGameStore.setState((s) => {
+      const p = s.state!.players[0];
+      const job = s.config.jobs.find((j) => j.locationId === "hiTechU")!;
+      p.jobId = job.id;
+      p.hoursRemaining = 10;
+      return { state: s.state };
+    });
+    render(<UniversityScreen />);
+    expect(screen.getByText("Your Job")).toBeInTheDocument();
+    expect(screen.getByText("Work")).toBeInTheDocument();
+    expect(screen.getByText("Request Raise")).toBeInTheDocument();
+    expect(screen.getByText("Quit Job")).toBeInTheDocument();
+  });
+
+  it("does not show a Your Job section when not employed at Hi-Tech U", () => {
+    atUniversity();
+    render(<UniversityScreen />);
+    expect(screen.queryByText("Your Job")).not.toBeInTheDocument();
+  });
+
+  it("quits the Hi-Tech U job when Quit Job is clicked", () => {
+    atUniversity();
+    useGameStore.setState((s) => {
+      const p = s.state!.players[0];
+      const job = s.config.jobs.find((j) => j.locationId === "hiTechU")!;
+      p.jobId = job.id;
+      return { state: s.state };
+    });
+    render(<UniversityScreen />);
+    fireEvent.click(screen.getByText("Quit Job"));
+    expect(useGameStore.getState().state!.players[0].jobId).toBeNull();
+  });
 });

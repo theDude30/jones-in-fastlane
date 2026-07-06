@@ -82,6 +82,33 @@
   background: rgba(34, 211, 238, 0.18);
 }
 
+.ht-status {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 10px 16px 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(34, 211, 238, 0.06);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+}
+
+.ht-status-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(126, 232, 255, 0.7);
+}
+
+.ht-status-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #7ee8ff;
+  font-variant-numeric: tabular-nums;
+}
+
 .ht-error {
   flex: none;
   margin: 10px 16px 0;
@@ -180,6 +207,17 @@
   background: linear-gradient(90deg, #22d3ee, #7ee8ff);
   box-shadow: 0 0 8px rgba(34, 211, 238, 0.7);
   transition: width 200ms ease-out;
+}
+
+.ht-job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ht-job-actions .ht-action {
+  margin-top: 0;
 }
 
 .ht-action {
