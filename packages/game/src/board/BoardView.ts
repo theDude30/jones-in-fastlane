@@ -53,21 +53,24 @@ const CAR_NOSE_OFFSET = Math.PI / 2;
 // match, instead of visually overlapping or shrinking to illegibility.
 const REFERENCE_BOARD_WIDTH = 640;
 
-// The status HUD sits in the board's open infield, dead center of the road
-// loop — (0.5, 0.495) is the stadium's geometric center in layout.ts's
-// derivation (midpoint of the two straight-away x's, ROAD_CY/ROAD_IMG_H for
-// y), same reference frame `boardLayout` and `roadPointAt` use. Sized in the
-// same reference-scale units as CARD_WIDTH/HEIGHT.
-const HUD_CENTER: BoardPoint = { x: 0.5, y: 0.495 };
-const HUD_WIDTH = 224;
-const HUD_HEADER_HEIGHT = 24;
+// The status HUD sits in the board's open infield, centered horizontally
+// and nudged above the road loop's geometric center (0.495, from
+// layout.ts's derivation) — the infield is noticeably tighter vertically
+// than the road's own centerline geometry suggests (it's bounded by the
+// inner edge of the road, not the centerline), so the panel is sized and
+// positioned conservatively to clear the road and the bottom row of
+// buildings (employmentOffice/hiTechU sit at y=0.868-0.901) at every board
+// aspect ratio, not just the ones this was eyeballed against.
+const HUD_CENTER: BoardPoint = { x: 0.5, y: 0.46 };
+const HUD_WIDTH = 210;
+const HUD_HEADER_HEIGHT = 20;
 const HUD_HEADER_INSET = 8;
-const HUD_HEADER_TOP_MARGIN = 4;
-const HUD_ROW_HEIGHT = 26;
-const HUD_ROWS_TOP_GAP = 6;
-const HUD_FOOTER_HEIGHT = 34;
-const HUD_FOOTER_TOP_GAP = 8;
-const HUD_BOTTOM_PAD = 10;
+const HUD_HEADER_TOP_MARGIN = 3;
+const HUD_ROW_HEIGHT = 21;
+const HUD_ROWS_TOP_GAP = 4;
+const HUD_FOOTER_HEIGHT = 26;
+const HUD_FOOTER_TOP_GAP = 5;
+const HUD_BOTTOM_PAD = 6;
 
 // Layout is computed top-down (header, then stat rows, then the End Turn
 // button) rather than split evenly, since the header/footer are each a
@@ -117,7 +120,7 @@ export class BoardView {
   private hudGraphics = new Graphics();
   private hudHeaderText = new Text({
     text: "THIS WEEK",
-    style: { fontSize: 11, fontWeight: "bold", fill: "#fff3e6", align: "center", letterSpacing: 1 },
+    style: { fontSize: 10, fontWeight: "bold", fill: "#fff3e6", align: "center", letterSpacing: 1 },
   });
   private hudRowTexts: { icon: Text; label: Text; value: Text }[] = [];
   private hudEndTurnButton = new Container();
@@ -159,20 +162,20 @@ export class BoardView {
     // `.text` changes on each syncState, same reuse pattern as player tokens.
     HUD_ROWS.forEach((row, i) => {
       const rowY = HUD_BODY_TOP + HUD_ROW_HEIGHT * (i + 0.5);
-      const icon = new Text({ text: row.icon, style: { fontSize: 13 } });
+      const icon = new Text({ text: row.icon, style: { fontSize: 11 } });
       icon.anchor.set(0, 0.5);
       icon.position.set(HUD_ICON_X, rowY);
 
       const label = new Text({
         text: row.label,
-        style: { fontSize: 10, fill: "#7a6a58", align: "left" },
+        style: { fontSize: 9, fill: "#7a6a58", align: "left" },
       });
       label.anchor.set(0, 0.5);
       label.position.set(HUD_LABEL_X, rowY);
 
       const value = new Text({
         text: "",
-        style: { fontSize: 12, fontWeight: "bold", fill: row.accent, align: "right" },
+        style: { fontSize: 11, fontWeight: "bold", fill: row.accent, align: "right" },
       });
       value.anchor.set(1, 0.5);
       value.position.set(HUD_VALUE_X, rowY);
@@ -199,7 +202,7 @@ export class BoardView {
     this.hudEndTurnGraphics.fill({ color: "#2a63c9" });
     const endTurnText = new Text({
       text: "END TURN",
-      style: { fontSize: 13, fontWeight: "bold", fill: "#ffffff", align: "center", letterSpacing: 0.5 },
+      style: { fontSize: 11, fontWeight: "bold", fill: "#ffffff", align: "center", letterSpacing: 0.5 },
     });
     endTurnText.anchor.set(0.5, 0.5);
     endTurnText.position.set(0, HUD_FOOTER_TOP + HUD_FOOTER_HEIGHT / 2);
