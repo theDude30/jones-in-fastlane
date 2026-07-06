@@ -75,7 +75,7 @@ export function PixiBoard() {
       }
 
       containerEl.appendChild(app.canvas);
-      boardView = new BoardView(app.stage, handleLocationClick);
+      boardView = new BoardView(app.stage, handleLocationClick, () => dispatch({ type: "EndTurn" }));
       boardViewRef.current = boardView;
       boardView.resize(containerEl.clientWidth, containerEl.clientHeight);
       if (stateRef.current) boardView.syncState(stateRef.current);

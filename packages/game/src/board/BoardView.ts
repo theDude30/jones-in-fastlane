@@ -60,12 +60,32 @@ const REFERENCE_BOARD_WIDTH = 640;
 // same reference-scale units as CARD_WIDTH/HEIGHT.
 const HUD_CENTER: BoardPoint = { x: 0.5, y: 0.495 };
 const HUD_WIDTH = 224;
-const HUD_HEIGHT = 140;
 const HUD_HEADER_HEIGHT = 24;
 const HUD_HEADER_INSET = 8;
-const HUD_BODY_TOP = -HUD_HEIGHT / 2 + HUD_HEADER_HEIGHT + 8;
-const HUD_BODY_BOTTOM = HUD_HEIGHT / 2 - 8;
-const HUD_ROW_HEIGHT = (HUD_BODY_BOTTOM - HUD_BODY_TOP) / 4;
+const HUD_HEADER_TOP_MARGIN = 4;
+const HUD_ROW_HEIGHT = 26;
+const HUD_ROWS_TOP_GAP = 6;
+const HUD_FOOTER_HEIGHT = 34;
+const HUD_FOOTER_TOP_GAP = 8;
+const HUD_BOTTOM_PAD = 10;
+
+// Layout is computed top-down (header, then stat rows, then the End Turn
+// button) rather than split evenly, since the header/footer are each a
+// fixed size while the panel's total height is whatever they add up to —
+// HUD_HEIGHT is derived, not chosen, so nothing here can drift out of sync
+// with the pieces it's supposed to contain. Each *_TOP_OFFSET below is
+// measured from the panel's top edge; callers convert to the panel's
+// centered local space (where (0,0) is the panel's middle) by subtracting
+// HUD_HEIGHT / 2.
+const HUD_HEADER_TOP_OFFSET = HUD_HEADER_TOP_MARGIN;
+const HUD_BODY_TOP_OFFSET = HUD_HEADER_TOP_OFFSET + HUD_HEADER_HEIGHT + HUD_ROWS_TOP_GAP;
+const HUD_BODY_BOTTOM_OFFSET = HUD_BODY_TOP_OFFSET + HUD_ROW_HEIGHT * 4;
+const HUD_FOOTER_TOP_OFFSET = HUD_BODY_BOTTOM_OFFSET + HUD_FOOTER_TOP_GAP;
+const HUD_HEIGHT = HUD_FOOTER_TOP_OFFSET + HUD_FOOTER_HEIGHT + HUD_BOTTOM_PAD;
+
+const HUD_HEADER_TOP = HUD_HEADER_TOP_OFFSET - HUD_HEIGHT / 2;
+const HUD_BODY_TOP = HUD_BODY_TOP_OFFSET - HUD_HEIGHT / 2;
+const HUD_FOOTER_TOP = HUD_FOOTER_TOP_OFFSET - HUD_HEIGHT / 2;
 const HUD_ICON_X = -HUD_WIDTH / 2 + 16;
 const HUD_LABEL_X = -HUD_WIDTH / 2 + 40;
 const HUD_VALUE_X = HUD_WIDTH / 2 - 14;
@@ -100,6 +120,8 @@ export class BoardView {
     style: { fontSize: 11, fontWeight: "bold", fill: "#fff3e6", align: "center", letterSpacing: 1 },
   });
   private hudRowTexts: { icon: Text; label: Text; value: Text }[] = [];
+  private hudEndTurnButton = new Container();
+  private hudEndTurnGraphics = new Graphics();
   private tokensLayer = new Container();
   private animationLayer = new Container();
   private buildingCards = new Map<
@@ -114,18 +136,22 @@ export class BoardView {
   private activeAnimations = new Map<string, { token: Sprite; tick: (ticker: Ticker) => void }>();
   private destroyed = false;
 
-  constructor(stage: Container, private onLocationClick: (locationId: string) => void) {
+  constructor(
+    stage: Container,
+    private onLocationClick: (locationId: string) => void,
+    private onEndTurn: () => void,
+  ) {
     stage.addChild(this.backdropLayer);
     stage.addChild(this.buildingsLayer);
     stage.addChild(this.hudLayer);
     stage.addChild(this.tokensLayer);
     stage.addChild(this.animationLayer);
 
-    // Not interactive — this is a read-only status panel, not a building.
-    this.hudLayer.eventMode = "none";
+    // The panel itself and its stat text aren't interactive — only the End
+    // Turn button (added below) opts in via its own eventMode.
     this.hudLayer.addChild(this.hudGraphics);
     this.hudHeaderText.anchor.set(0.5, 0.5);
-    this.hudHeaderText.position.set(0, -HUD_HEIGHT / 2 + HUD_HEADER_HEIGHT / 2 + 2);
+    this.hudHeaderText.position.set(0, HUD_HEADER_TOP + HUD_HEADER_HEIGHT / 2);
     this.hudLayer.addChild(this.hudHeaderText);
 
     // One row per stat: icon (left), dim label (left, next to icon), bold
@@ -154,6 +180,31 @@ export class BoardView {
       this.hudLayer.addChild(icon, label, value);
       this.hudRowTexts.push({ icon, label, value });
     });
+
+    // End Turn button: the only interactive part of the HUD. Sits as a
+    // footer bar below the stat rows, styled as a distinct call-to-action
+    // (blue) against the plaque's warm cream/brown so it doesn't read as
+    // just another stat.
+    this.hudEndTurnButton.eventMode = "static";
+    this.hudEndTurnButton.cursor = "pointer";
+    this.hudEndTurnButton.on("pointertap", () => this.onEndTurn());
+    this.hudEndTurnButton.addChild(this.hudEndTurnGraphics);
+    this.hudEndTurnGraphics.roundRect(
+      -HUD_WIDTH / 2 + 14,
+      HUD_FOOTER_TOP,
+      HUD_WIDTH - 28,
+      HUD_FOOTER_HEIGHT,
+      10,
+    );
+    this.hudEndTurnGraphics.fill({ color: "#2a63c9" });
+    const endTurnText = new Text({
+      text: "END TURN",
+      style: { fontSize: 13, fontWeight: "bold", fill: "#ffffff", align: "center", letterSpacing: 0.5 },
+    });
+    endTurnText.anchor.set(0.5, 0.5);
+    endTurnText.position.set(0, HUD_FOOTER_TOP + HUD_FOOTER_HEIGHT / 2);
+    this.hudEndTurnButton.addChild(endTurnText);
+    this.hudLayer.addChild(this.hudEndTurnButton);
 
     // Backdrop art loads asynchronously; lay it out once it's ready, using
     // whatever board rect is current at that moment (resize() re-lays-out
@@ -386,7 +437,7 @@ export class BoardView {
     // Header nameplate, inset from the body's top edge.
     this.hudGraphics.roundRect(
       -HUD_WIDTH / 2 + HUD_HEADER_INSET,
-      -HUD_HEIGHT / 2 + 4,
+      HUD_HEADER_TOP,
       HUD_WIDTH - HUD_HEADER_INSET * 2,
       HUD_HEADER_HEIGHT,
       10,
