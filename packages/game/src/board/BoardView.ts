@@ -11,7 +11,7 @@ import {
   shortestRoadDelta,
   toPixelPosition,
 } from "./layout.js";
-import type { BoardRect } from "./layout.js";
+import type { BoardPoint, BoardRect } from "./layout.js";
 import { buildingColor } from "./buildingStyles.js";
 import { clusterPlayersByLocation, fanOffsets } from "./playerClusters.js";
 
@@ -53,6 +53,32 @@ const CAR_NOSE_OFFSET = Math.PI / 2;
 // transform, or they visually overlap at small sizes.
 const REFERENCE_BOARD_WIDTH = 640;
 
+// The status HUD sits in the board's open infield, dead center of the road
+// loop — (0.5, 0.495) is the stadium's geometric center in layout.ts's
+// derivation (midpoint of the two straight-away x's, ROAD_CY/ROAD_IMG_H for
+// y), same reference frame `boardLayout` and `roadPointAt` use. Sized in the
+// same reference-scale units as CARD_WIDTH/HEIGHT.
+const HUD_CENTER: BoardPoint = { x: 0.5, y: 0.495 };
+const HUD_WIDTH = 224;
+const HUD_HEIGHT = 140;
+const HUD_HEADER_HEIGHT = 24;
+const HUD_HEADER_INSET = 8;
+const HUD_BODY_TOP = -HUD_HEIGHT / 2 + HUD_HEADER_HEIGHT + 8;
+const HUD_BODY_BOTTOM = HUD_HEIGHT / 2 - 8;
+const HUD_ROW_HEIGHT = (HUD_BODY_BOTTOM - HUD_BODY_TOP) / 4;
+const HUD_ICON_X = -HUD_WIDTH / 2 + 16;
+const HUD_LABEL_X = -HUD_WIDTH / 2 + 40;
+const HUD_VALUE_X = HUD_WIDTH / 2 - 14;
+
+// One row per stat, in display order. `accent` colors the value text so each
+// stat reads at a glance instead of blurring into one plain block.
+const HUD_ROWS: { icon: string; label: string; accent: string }[] = [
+  { icon: "⏳", label: "Time Left", accent: "#2a7fff" },
+  { icon: "💵", label: "Cash", accent: "#1f8a4c" },
+  { icon: "📅", label: "Week", accent: "#8a5a1c" },
+  { icon: "💼", label: "Work", accent: "#c0392b" },
+];
+
 /**
  * Owns every Pixi object on the board: the backdrop, building cards, and
  * player tokens. `syncState` is the one-way sync point from game state to
@@ -67,6 +93,13 @@ export class BoardView {
   private backdropLayer = new Container();
   private backdropSprite: Sprite | null = null;
   private buildingsLayer = new Container();
+  private hudLayer = new Container();
+  private hudGraphics = new Graphics();
+  private hudHeaderText = new Text({
+    text: "THIS WEEK",
+    style: { fontSize: 11, fontWeight: "bold", fill: "#fff3e6", align: "center", letterSpacing: 1 },
+  });
+  private hudRowTexts: { icon: Text; label: Text; value: Text }[] = [];
   private tokensLayer = new Container();
   private animationLayer = new Container();
   private buildingCards = new Map<
@@ -84,8 +117,43 @@ export class BoardView {
   constructor(stage: Container, private onLocationClick: (locationId: string) => void) {
     stage.addChild(this.backdropLayer);
     stage.addChild(this.buildingsLayer);
+    stage.addChild(this.hudLayer);
     stage.addChild(this.tokensLayer);
     stage.addChild(this.animationLayer);
+
+    // Not interactive — this is a read-only status panel, not a building.
+    this.hudLayer.eventMode = "none";
+    this.hudLayer.addChild(this.hudGraphics);
+    this.hudHeaderText.anchor.set(0.5, 0.5);
+    this.hudHeaderText.position.set(0, -HUD_HEIGHT / 2 + HUD_HEADER_HEIGHT / 2 + 2);
+    this.hudLayer.addChild(this.hudHeaderText);
+
+    // One row per stat: icon (left), dim label (left, next to icon), bold
+    // colored value (right-aligned). Created once and reused — only their
+    // `.text` changes on each syncState, same reuse pattern as player tokens.
+    HUD_ROWS.forEach((row, i) => {
+      const rowY = HUD_BODY_TOP + HUD_ROW_HEIGHT * (i + 0.5);
+      const icon = new Text({ text: row.icon, style: { fontSize: 13 } });
+      icon.anchor.set(0, 0.5);
+      icon.position.set(HUD_ICON_X, rowY);
+
+      const label = new Text({
+        text: row.label,
+        style: { fontSize: 10, fill: "#7a6a58", align: "left" },
+      });
+      label.anchor.set(0, 0.5);
+      label.position.set(HUD_LABEL_X, rowY);
+
+      const value = new Text({
+        text: "",
+        style: { fontSize: 12, fontWeight: "bold", fill: row.accent, align: "right" },
+      });
+      value.anchor.set(1, 0.5);
+      value.position.set(HUD_VALUE_X, rowY);
+
+      this.hudLayer.addChild(icon, label, value);
+      this.hudRowTexts.push({ icon, label, value });
+    });
 
     // Backdrop art loads asynchronously; lay it out once it's ready, using
     // whatever board rect is current at that moment (resize() re-lays-out
@@ -163,6 +231,7 @@ export class BoardView {
   syncState(state: GameState): void {
     this.lastState = state;
     this.drawBuildingCards(state);
+    this.drawCenterHud(state);
     this.drawTokens(state);
   }
 
@@ -232,6 +301,7 @@ export class BoardView {
     for (const playerId of [...this.activeAnimations.keys()]) this.cancelAnimation(playerId);
     this.backdropLayer.destroy({ children: true });
     this.buildingsLayer.destroy({ children: true });
+    this.hudLayer.destroy({ children: true });
     this.tokensLayer.destroy({ children: true });
     this.animationLayer.destroy({ children: true });
     this.playerTokens.clear();
@@ -293,6 +363,56 @@ export class BoardView {
         label.style.wordWrapWidth = CARD_WIDTH - 8;
       }
     }
+  }
+
+  /**
+   * Status readout for the current player, in the board's open infield.
+   * Styled as a signboard plaque (warm wood-brown header, cream body) to sit
+   * naturally in the illustrated village rather than reading as a debug
+   * overlay: icon + dim label on the left of each row, a bold color-coded
+   * value on the right, thin dividers separating the four stats.
+   */
+  private drawCenterHud(state: GameState): void {
+    const scale = this.scale;
+    const { x, y } = toPixelPosition(HUD_CENTER, this.rect);
+    this.hudLayer.position.set(x, y);
+    this.hudLayer.scale.set(scale);
+
+    this.hudGraphics.clear();
+    // Body plaque.
+    this.hudGraphics.roundRect(-HUD_WIDTH / 2, -HUD_HEIGHT / 2, HUD_WIDTH, HUD_HEIGHT, 16);
+    this.hudGraphics.fill({ color: "#fff7ea" });
+    this.hudGraphics.stroke({ width: 2.5, color: "#6b4226" });
+    // Header nameplate, inset from the body's top edge.
+    this.hudGraphics.roundRect(
+      -HUD_WIDTH / 2 + HUD_HEADER_INSET,
+      -HUD_HEIGHT / 2 + 4,
+      HUD_WIDTH - HUD_HEADER_INSET * 2,
+      HUD_HEADER_HEIGHT,
+      10,
+    );
+    this.hudGraphics.fill({ color: "#6b4226" });
+    // Row dividers.
+    for (let i = 1; i < HUD_ROWS.length; i++) {
+      const dividerY = HUD_BODY_TOP + HUD_ROW_HEIGHT * i;
+      this.hudGraphics.moveTo(-HUD_WIDTH / 2 + 14, dividerY);
+      this.hudGraphics.lineTo(HUD_WIDTH / 2 - 14, dividerY);
+      this.hudGraphics.stroke({ width: 1, color: "#6b4226", alpha: 0.18 });
+    }
+
+    const player = state.players[state.currentPlayerIndex];
+    const job = player.jobId !== null ? defaultConfig.jobs.find((j) => j.id === player.jobId) : undefined;
+    const workLocation = job && defaultConfig.locations.find((l) => l.id === job.locationId)?.name;
+
+    const values = [
+      `${player.hoursRemaining.toFixed(1)}h`,
+      `$${player.cash.toFixed(0)}`,
+      `${state.week}`,
+      workLocation ?? "Unemployed",
+    ];
+    this.hudRowTexts.forEach((row, i) => {
+      row.value.text = values[i];
+    });
   }
 
   private drawTokens(state: GameState): void {
